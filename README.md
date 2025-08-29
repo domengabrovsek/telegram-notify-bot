@@ -106,6 +106,46 @@ terraform plan   # 📋 Preview infrastructure changes
 terraform apply  # ✅ Apply changes
 ```
 
+## 🔄 CI/CD with GitHub Actions
+
+This project includes automated deployment via GitHub Actions. To enable it:
+
+### Required GitHub Secrets
+
+Add these secrets to your repository (`Settings` → `Secrets and variables` → `Actions`):
+
+#### 🔑 Authentication (choose one method):
+
+**Option A: AWS Access Keys**
+```
+AWS_ACCESS_KEY_ID       # Your AWS access key
+AWS_SECRET_ACCESS_KEY   # Your AWS secret key
+```
+
+**Option B: AWS IAM Role (OIDC - recommended)**
+```
+TERRAFORM_ROLE          # ARN of IAM role for OIDC auth
+```
+
+#### 🤖 Telegram Configuration
+```
+TELEGRAM_BOT_TOKEN      # Your bot token from @BotFather
+TELEGRAM_CHAT_ID        # Your chat ID (number)
+```
+
+#### 🛡️ Security Scanning (optional)
+```
+BEARER_TOKEN           # Bearer API token for security scanning
+```
+
+### 🚀 How it works
+
+- **Security workflow**: Runs on every pull request to scan for vulnerabilities
+- **Deploy workflow**: Runs on push to `master` branch to deploy changes
+- **Dependabot**: Automatically creates PRs for dependency updates
+
+After setup, just push to `master` and your bot will be deployed automatically! 🎉
+
 ## 🗂️ Project Structure
 
 ```
