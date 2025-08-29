@@ -1,15 +1,18 @@
 # AWS Configuration
 aws_region = "eu-central-1"
-aws_profile = ""
+aws_profile = ""  # Optional: set to your AWS profile name (e.g., "my-sso-profile")
+
+# Terraform State Management (use your existing S3 bucket)
+terraform_state_bucket = "your-existing-terraform-state-bucket"
 
 # Project Configuration
 project_name = "telegram-notify-bot"
-stage_name   = "prod"
+stage_name = "prod"
 
-# Telegram Configuration
-# Get your bot token from @BotFather on Telegram
-telegram_bot_token = "YOUR_TELEGRAM_BOT_TOKEN_HERE"
+# Telegram Configuration (required)
+telegram_bot_token = "123456789:your_bot_token_here"
+telegram_chat_id = "your_chat_id_here"
 
-# Get your chat ID by messaging your bot and checking the updates
-# You can use: https://api.telegram.org/bot<YourBOTToken>/getUpdates
-telegram_chat_id = "YOUR_TELEGRAM_CHAT_ID_HERE"
+# Optional Configuration
+lambda_timeout = 15
+log_retention_days = 7

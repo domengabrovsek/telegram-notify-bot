@@ -67,9 +67,9 @@ jobs:
       with:
         terraform_version: 1.6.0
 
-    # Initialize Terraform to download providers
+    # Initialize Terraform to download providers (backend config not needed for validation)
     - name: Terraform Init
-      run: terraform init
+      run: terraform init -backend=false
       working-directory: ./terraform
 
     # Validate Terraform configuration

@@ -146,6 +146,7 @@ vite.config.ts.timestamp-*
 .terraform/
 .terraform.lock.hcl
 terraform/lambda_function.zip
+terraform/backend.hcl
 
 # AWS and sensitive files
 .aws/

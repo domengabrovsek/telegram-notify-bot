@@ -1,0 +1,6 @@
+# Backend configuration file
+# Copy this to backend.hcl and update with your values
+# Then run: terraform init -backend-config=backend.hcl
+
+bucket = "your-existing-terraform-state-bucket"
+region = "eu-central-1"

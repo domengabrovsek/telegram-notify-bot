@@ -6,7 +6,9 @@
   "scripts": {
     "build": "esbuild index.ts --bundle --platform=node --target=node22 --outfile=dist/index.js --external:aws-sdk",
     "dev": "esbuild index.ts --bundle --platform=node --target=node22 --outfile=dist/index.js --watch --external:aws-sdk",
-    "deploy": "cd terraform && terraform apply -auto-approve",
+    "terraform:init": "cd terraform && terraform init -backend-config=backend.hcl",
+    "terraform:deploy": "cd terraform && terraform apply -auto-approve",
+    "terraform:destroy": "cd terraform && terraform destroy -auto-approve",
     "clean": "rm -rf dist"
   },
   "repository": {

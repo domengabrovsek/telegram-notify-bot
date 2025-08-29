@@ -15,6 +15,11 @@ variable "aws_profile" {
   default     = ""
 }
 
+variable "terraform_state_bucket" {
+  description = "S3 bucket name for storing Terraform state"
+  type        = string
+}
+
 variable "project_name" {
   description = "Name of the project (used for Lambda function and other resources). Must be unique in your AWS account."
   type        = string

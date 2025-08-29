@@ -14,6 +14,13 @@ terraform {
       version = "~> 3.2"
     }
   }
+  
+  # Remote state backend for S3 (partial configuration)
+  backend "s3" {
+    key     = "telegram-bot/terraform.tfstate"
+    encrypt = true
+    # bucket and region are provided via backend-config or backend.hcl
+  }
 }
 
 provider "aws" {
@@ -49,8 +56,9 @@ data "archive_file" "lambda_zip" {
 
 # IAM role for Lambda function
 resource "aws_iam_role" "lambda_role" {
-  name = "${var.project_name}-lambda-role"
-  tags = var.tags
+  name        = "${var.project_name}-lambda-role"
+  description = "IAM role for ${var.project_name} Lambda function - managed by Terraform"
+  tags        = var.tags
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -89,6 +97,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 resource "aws_lambda_function" "telegram_bot" {
   filename         = data.archive_file.lambda_zip.output_path
   function_name    = var.project_name
+  description      = "${var.project_name} Telegram notification bot - managed by Terraform"
   role            = aws_iam_role.lambda_role.arn
   handler         = "index.handler"
   runtime         = "nodejs22.x"
@@ -124,13 +133,18 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
 # API Gateway REST API
 resource "aws_api_gateway_rest_api" "telegram_api" {
   name        = "${var.project_name}-api"
-  description = "API Gateway for Telegram Bot webhook"
+  description = "API Gateway for ${var.project_name} Telegram bot webhook - managed by Terraform"
   
   endpoint_configuration {
     types = ["REGIONAL"]
   }
 
   tags = var.tags
+
+  # Ensure proper deletion order
+  lifecycle {
+    create_before_destroy = false
+  }
 }
 
 # API Gateway Resource

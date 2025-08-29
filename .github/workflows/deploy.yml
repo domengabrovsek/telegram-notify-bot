@@ -61,9 +61,18 @@ jobs:
         terraform_wrapper: false  # Disable wrapper for better output
 
     # Initialize Terraform backend and download providers
+    # Create backend config dynamically from secrets and variables
+    - name: Create Backend Config
+      working-directory: ./terraform
+      run: |
+        cat > backend.hcl << EOF
+        bucket = "${{ secrets.TERRAFORM_STATE_BUCKET }}"
+        region = "${{ env.AWS_REGION }}"
+        EOF
+
     - name: Terraform Init
       working-directory: ./terraform
-      run: terraform init
+      run: terraform init -backend-config=backend.hcl
 
     # Validate Terraform configuration files
     - name: Terraform Validate
