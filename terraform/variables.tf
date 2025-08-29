@@ -18,6 +18,7 @@ variable "aws_profile" {
 variable "terraform_state_bucket" {
   description = "S3 bucket name for storing Terraform state"
   type        = string
+  sensitive   = true
 }
 
 variable "project_name" {
