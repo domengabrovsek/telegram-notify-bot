@@ -13,7 +13,6 @@ variable "aws_profile" {
   description = "AWS profile to use (optional - leave empty to use default credentials)"
   type        = string
   default     = ""
-  sensitive   = true
 }
 
 variable "terraform_state_bucket" {
@@ -26,7 +25,6 @@ variable "project_name" {
   description = "Name of the project (used for Lambda function and other resources). Must be unique in your AWS account."
   type        = string
   default     = "telegram-notify-bot"
-  sensitive   = true
   
   validation {
     condition = can(regex("^[a-zA-Z0-9-_]+$", var.project_name)) && length(var.project_name) <= 64
