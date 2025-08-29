@@ -32,7 +32,7 @@
   "homepage": "https://github.com/domengabrovsek/telegram-notify-bot#readme",
   "devDependencies": {
     "@types/node": "^24.3.0",
-    "esbuild": "^0.21.0"
+    "esbuild": "^0.25.9"
   },
   "dependencies": {
     "undici": "^7.15.0"
