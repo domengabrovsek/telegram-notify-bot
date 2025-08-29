@@ -67,6 +67,11 @@ jobs:
       with:
         terraform_version: 1.6.0
 
+    # Initialize Terraform to download providers
+    - name: Terraform Init
+      run: terraform init
+      working-directory: ./terraform
+
     # Validate Terraform configuration
     - name: Terraform Format Check
       run: terraform fmt -check
