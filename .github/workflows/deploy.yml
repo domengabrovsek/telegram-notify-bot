@@ -86,6 +86,7 @@ jobs:
         terraform plan \
           -var="telegram_bot_token=${{ secrets.TELEGRAM_BOT_TOKEN }}" \
           -var="telegram_chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+          -var="terraform_state_bucket=${{ secrets.TERRAFORM_STATE_BUCKET }}" \
           -var="project_name=${{ env.PROJECT_NAME }}" \
           -var="aws_region=${{ env.AWS_REGION }}"
 
@@ -96,6 +97,7 @@ jobs:
         terraform apply -auto-approve \
           -var="telegram_bot_token=${{ secrets.TELEGRAM_BOT_TOKEN }}" \
           -var="telegram_chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+          -var="terraform_state_bucket=${{ secrets.TERRAFORM_STATE_BUCKET }}" \
           -var="project_name=${{ env.PROJECT_NAME }}" \
           -var="aws_region=${{ env.AWS_REGION }}"
 
