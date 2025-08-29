@@ -1,0 +1,49 @@
+version: 2
+updates:
+  # Check for npm package updates monthly
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Ljubljana"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "npm"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "npm"
+
+  # Check for GitHub Actions updates monthly  
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday" 
+      time: "09:00"
+      timezone: "Europe/Ljubljana"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "actions"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # Check for Terraform updates monthly
+  - package-ecosystem: "terraform"
+    directory: "/terraform"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00" 
+      timezone: "Europe/Ljubljana"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "terraform"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "terraform"
