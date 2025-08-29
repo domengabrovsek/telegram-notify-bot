@@ -7,4 +7,5 @@ output "api_gateway_invoke_url" {
 output "lambda_function_name" {
   description = "Name of the Lambda function"
   value       = aws_lambda_function.telegram_bot.function_name
+  sensitive   = true
 }

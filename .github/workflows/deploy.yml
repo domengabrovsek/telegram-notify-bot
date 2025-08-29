@@ -15,7 +15,7 @@ on:
 # Environment variables used across all jobs
 env:
   CI: true
-  AWS_REGION: eu-central-1
+  AWS_REGION: ${{ secrets.AWS_REGION }}
   PROJECT_NAME: telegram-notify-bot
 
 jobs:
@@ -101,20 +101,21 @@ jobs:
           -var="project_name=${{ env.PROJECT_NAME }}" \
           -var="aws_region=${{ env.AWS_REGION }}"
 
-    # Extract webhook URL from Terraform outputs
+    # Extract webhook URL from Terraform outputs (masked for security)
     - name: Get webhook URL
       working-directory: ./terraform
       run: |
         WEBHOOK_URL=$(terraform output -raw api_gateway_invoke_url)
         echo "WEBHOOK_URL=$WEBHOOK_URL" >> $GITHUB_ENV
-        echo "✅ Webhook URL: $WEBHOOK_URL"
+        echo "✅ Webhook URL configured (masked for security)"
 
     # Send test notification to verify deployment works
     - name: Send deployment notification
       run: |
         echo "📱 Sending deployment notification..."
-        curl -X POST "${{ env.WEBHOOK_URL }}" \
+        curl -s -X POST "${{ env.WEBHOOK_URL }}" \
              -H "Content-Type: application/json" \
              -d '{"message": {"text": "🚀 Telegram bot deployed successfully via GitHub Actions!"}}' \
-             && echo "✅ Test notification sent!" \
+             -o /dev/null \
+             && echo "✅ Test notification sent successfully!" \
              || echo "⚠️ Test notification failed, but deployment succeeded"
