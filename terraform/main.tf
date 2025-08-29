@@ -18,8 +18,7 @@ terraform {
 
 provider "aws" {
   region  = var.aws_region
-  # Set profile if using AWS SSO login profile
-  # profile = ""
+  profile = var.aws_profile != "" ? var.aws_profile : null
 }
 
 # Build the bundle using esbuild

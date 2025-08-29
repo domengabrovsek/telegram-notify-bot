@@ -9,6 +9,12 @@ variable "aws_region" {
   }
 }
 
+variable "aws_profile" {
+  description = "AWS profile to use (optional - leave empty to use default credentials)"
+  type        = string
+  default     = ""
+}
+
 variable "project_name" {
   description = "Name of the project (used for Lambda function and other resources). Must be unique in your AWS account."
   type        = string

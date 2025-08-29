@@ -1,5 +1,6 @@
 # AWS Configuration
 aws_region = "eu-central-1"
+aws_profile = ""
 
 # Project Configuration
 project_name = "telegram-notify-bot"
