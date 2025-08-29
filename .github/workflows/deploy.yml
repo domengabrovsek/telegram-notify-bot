@@ -1,0 +1,109 @@
+name: Deploy Telegram Bot
+
+# Required permissions for OIDC (if using AWS IAM roles)
+permissions:
+  id-token: write   # Required for AWS OIDC authentication
+  contents: read    # Required to checkout repository
+
+# Trigger workflow on push to master branch
+on:
+  push:
+    branches: [ master ]
+  # Allow manual workflow runs for testing
+  workflow_dispatch:
+
+# Environment variables used across all jobs
+env:
+  CI: true
+  AWS_REGION: eu-central-1
+  PROJECT_NAME: telegram-notify-bot
+
+jobs:
+  deploy:
+    name: Deploy to AWS
+    runs-on: ubuntu-latest
+    
+    steps:
+    # Checkout repository code
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # Setup Node.js using version from .nvmrc file (Node 22)
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: 'npm'
+
+    # Install dependencies using npm ci for faster, reliable builds
+    - name: Install dependencies
+      run: npm ci --ignore-scripts --no-progress --audit=false
+
+    # Build TypeScript code for Lambda deployment
+    - name: Build application
+      run: npm run build
+
+    # Configure AWS credentials using IAM role or access keys
+    - name: Setup AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        # Use IAM role if TERRAFORM_ROLE is set, otherwise fall back to access keys
+        role-to-assume: ${{ secrets.TERRAFORM_ROLE }}
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    # Setup Terraform CLI
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.0
+        terraform_wrapper: false  # Disable wrapper for better output
+
+    # Initialize Terraform backend and download providers
+    - name: Terraform Init
+      working-directory: ./terraform
+      run: terraform init
+
+    # Validate Terraform configuration files
+    - name: Terraform Validate
+      working-directory: ./terraform
+      run: terraform validate
+
+    # Plan infrastructure changes (preview what will be deployed)
+    - name: Terraform Plan
+      working-directory: ./terraform
+      run: |
+        terraform plan \
+          -var="telegram_bot_token=${{ secrets.TELEGRAM_BOT_TOKEN }}" \
+          -var="telegram_chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+          -var="project_name=${{ env.PROJECT_NAME }}" \
+          -var="aws_region=${{ env.AWS_REGION }}"
+
+    # Apply infrastructure changes
+    - name: Terraform Apply
+      working-directory: ./terraform
+      run: |
+        terraform apply -auto-approve \
+          -var="telegram_bot_token=${{ secrets.TELEGRAM_BOT_TOKEN }}" \
+          -var="telegram_chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+          -var="project_name=${{ env.PROJECT_NAME }}" \
+          -var="aws_region=${{ env.AWS_REGION }}"
+
+    # Extract webhook URL from Terraform outputs
+    - name: Get webhook URL
+      working-directory: ./terraform
+      run: |
+        WEBHOOK_URL=$(terraform output -raw api_gateway_invoke_url)
+        echo "WEBHOOK_URL=$WEBHOOK_URL" >> $GITHUB_ENV
+        echo "✅ Webhook URL: $WEBHOOK_URL"
+
+    # Send test notification to verify deployment works
+    - name: Send deployment notification
+      run: |
+        echo "📱 Sending deployment notification..."
+        curl -X POST "${{ env.WEBHOOK_URL }}" \
+             -H "Content-Type: application/json" \
+             -d '{"message": {"text": "🚀 Telegram bot deployed successfully via GitHub Actions!"}}' \
+             && echo "✅ Test notification sent!" \
+             || echo "⚠️ Test notification failed, but deployment succeeded"
