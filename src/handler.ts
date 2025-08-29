@@ -23,33 +23,34 @@ export const handler = async (event: { body: string}) => {
       return { statusCode: 200, body: JSON.stringify({ message: 'No action taken' }) };
     }
 
-    // Security: Only allow messages from the configured chat ID
-    const allowedChatId = process.env.TELEGRAM_CHAT_ID;
-    const messageChatId = body.message.chat.id.toString();
+    // Check if this is a direct API call (no chat info) or Telegram webhook
+    let message = body.message.text.trim();
     
-    if (!allowedChatId || messageChatId !== allowedChatId) {
-      console.warn(`Unauthorized message from chat ID: ${messageChatId}, expected: ${allowedChatId}`);
+    if (body.message.chat?.id) {
+      // This is a Telegram webhook - validate chat ID
+      const allowedChatId = process.env.TELEGRAM_CHAT_ID;
+      const messageChatId = body.message.chat.id.toString();
       
-      // Send security alert to authorized user
-      const alertMessage = `🚨 Security Alert: Unauthorized bot access attempt
-      
+      if (!allowedChatId || messageChatId !== allowedChatId) {
+        console.warn(`Unauthorized message from chat ID: ${messageChatId}, expected: ${allowedChatId}`);
+        
+        // Send security alert to authorized user
+        const alertMessage = `🚨 Security Alert: Unauthorized bot access attempt
+        
 Chat ID: ${messageChatId}
 User: ${body.message.from?.first_name || 'Unknown'} ${body.message.from?.last_name || ''} (@${body.message.from?.username || 'no-username'})
 Message: "${body.message.text}"
 Time: ${new Date().toISOString()}`;
 
-      try {
-        await sendMessage(alertMessage);
-      } catch (error) {
-        console.error('Failed to send security alert:', error);
+        try {
+          await sendMessage(alertMessage);
+        } catch (error) {
+          console.error('Failed to send security alert:', error);
+        }
+        
+        return { statusCode: 200, body: JSON.stringify({ message: 'Unauthorized' }) };
       }
-      
-      return { statusCode: 200, body: JSON.stringify({ message: 'Unauthorized' }) };
     }
-
-    // Sanitize message text
-    const message = body.message.text.trim();
-    
     if (message.length === 0) {
       console.warn('Empty message received');
       return { statusCode: 200, body: JSON.stringify({ message: 'Empty message ignored' }) };
