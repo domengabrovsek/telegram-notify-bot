@@ -89,10 +89,11 @@ jobs:
         working_directory: terraform
         format: sarif
         soft_fail: true
+      continue-on-error: true
 
-    # Upload tfsec results
+    # Upload tfsec results only if SARIF file exists
     - name: Upload tfsec SARIF
-      if: always()
+      if: hashFiles('tfsec.sarif') != ''
       uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: tfsec.sarif
