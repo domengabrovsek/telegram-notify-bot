@@ -57,6 +57,7 @@ Time: ${new Date().toISOString()}`;
     }
 
     await sendMessage(message);
+    console.log(`Message sent successfully: ${message}`);
     
     return { 
       statusCode: 200, 
