@@ -50,7 +50,7 @@ jobs:
     # Upload results to GitHub Security tab
     - name: Upload Bearer SARIF
       if: always()
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: bearer-results.sarif
 
@@ -94,6 +94,6 @@ jobs:
     # Upload tfsec results only if SARIF file exists
     - name: Upload tfsec SARIF
       if: hashFiles('tfsec.sarif') != ''
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: tfsec.sarif
