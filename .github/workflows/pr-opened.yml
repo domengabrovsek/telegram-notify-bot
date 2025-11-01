@@ -1,0 +1,11 @@
+name: PR Opened
+
+on:
+  pull_request:
+    types: [opened]
+    branches: [master]
+
+jobs:
+  send-pr-opened-notification:
+    uses: domengabrovsek/github-actions/.github/workflows/pr-opened.yml@master
+    secrets: inherit

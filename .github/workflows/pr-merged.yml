@@ -1,0 +1,12 @@
+name: PR Merged
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [master]
+
+jobs:
+  send-pr-merged-notification:
+    if: github.event.pull_request.merged == true
+    uses: domengabrovsek/github-actions/.github/workflows/pr-merged.yml@master
+    secrets: inherit
