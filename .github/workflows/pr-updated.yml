@@ -1,0 +1,11 @@
+name: PR Updated
+
+on:
+  pull_request:
+    types: [synchronize]
+    branches: [master]
+
+jobs:
+  send-pr-updated-notification:
+    uses: domengabrovsek/github-actions/.github/workflows/pr-updated.yml@master
+    secrets: inherit
