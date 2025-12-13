@@ -1,66 +1,70 @@
-# 🤖 Telegram Notify Bot
+# Telegram Notify Bot
 
-A secure, serverless Telegram bot for sending notifications. Deploy with one command to AWS Lambda and start receiving alerts instantly! 
+Serverless Telegram bot for sending notifications via AWS Lambda.
 
-Built with TypeScript, secured by design, and optimized for minimal costs.
+## Prerequisites
 
-## ✨ What it does
+- [Telegram Bot Token](https://t.me/botfather) (create with @BotFather)
+- AWS account with CLI configured
+- [Terraform](https://terraform.io) v1.6+
+- Node.js 22+
+- S3 bucket for Terraform state
 
-- 📨 **Receives messages** via Telegram webhook
-- 🔒 **Secure access control** - only you can use it
-- 🚨 **Security alerts** - notifies you of unauthorized access attempts
-- 🔄 **Message forwarding** - echoes your messages back to you
-- ☁️ **Auto-deployment** - infrastructure handled automatically
+## Environment Variables
 
-Perfect for monitoring alerts, CI/CD notifications, or any automated messaging needs!
+### Terraform Variables (`terraform.tfvars`)
 
-## 📋 Prerequisites
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `aws_region` | Yes | AWS region for deployment | `eu-central-1` |
+| `aws_profile` | No | AWS CLI profile (optional, uses default if empty) | `my-sso-profile` |
+| `terraform_state_bucket` | Yes | S3 bucket name for Terraform state | `my-terraform-state` |
+| `telegram_bot_token` | Yes | Bot token from @BotFather | `123456789:ABCdef...` |
+| `telegram_chat_id` | Yes | Your Telegram chat ID | `12345678` |
+| `project_name` | Yes | Project identifier | `telegram-notify-bot` |
 
-- 🤖 [Telegram Bot Token](https://t.me/botfather) (create with @BotFather)
-- ☁️ AWS account with CLI configured
-- 🏗️ [Terraform](https://terraform.io) installed (v1.6+)
-- 📦 Node.js 22+
-- 🪣 S3 bucket for Terraform state (pre-existing)
+### GitHub Actions Secrets
 
-## 🚀 Quick Setup
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `AWS_REGION` | Yes | AWS region for deployment | `eu-central-1` |
+| `TERRAFORM_STATE_BUCKET` | Yes | S3 bucket name for Terraform state | `my-terraform-state` |
+| `TELEGRAM_BOT_TOKEN` | Yes | Bot token from @BotFather | `123456789:ABCdef...` |
+| `TELEGRAM_CHAT_ID` | Yes | Your Telegram chat ID | `12345678` |
+| `TELEGRAM_API_URL` | Yes | Telegram API base URL | `https://api.telegram.org` |
+| `TERRAFORM_ROLE` | Yes* | IAM role ARN for OIDC authentication | `arn:aws:iam::123456789:role/...` |
 
-### 1. 🤖 Create your Telegram bot
+\* Using OIDC authentication (recommended). Alternatively, you can use `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` for key-based auth.
+
+## Quick Setup
+
+### 1. Create Telegram Bot
 - Message [@BotFather](https://t.me/botfather) on Telegram
 - Send `/newbot` and follow instructions
-- Save your bot token (looks like `123456789:ABCdef...`)
+- Save your bot token
 
-### 2. 🆔 Get your chat ID
-- Message your new bot with anything
+### 2. Get Your Chat ID
+- Message your new bot
 - Visit: `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates`
-- Find your chat ID in the response (usually a number like `12345678`)
+- Find your chat ID in the response
 
-### 3. ⚙️ Configure the project
+### 3. Configure Terraform
 Create `terraform/terraform.tfvars`:
 ```hcl
-# AWS Configuration
-aws_region = "eu-central-1"
-aws_profile = "your-sso-profile"  # Optional: leave empty for default credentials
-
-# Terraform State Management
-terraform_state_bucket = "your-terraform-state-bucket-name"
-
-# Telegram Configuration  
-telegram_bot_token = "123456789:your_bot_token_here"
-telegram_chat_id = "your_chat_id_here"
-
-# Project Configuration
-project_name = "telegram-notify-bot"
+aws_region             = "eu-central-1"
+aws_profile            = ""  # Optional
+terraform_state_bucket = "your-terraform-state-bucket"
+telegram_bot_token     = "123456789:your_bot_token_here"
+telegram_chat_id       = "your_chat_id_here"
+project_name           = "telegram-notify-bot"
 ```
 
-### 4. 🚀 Deploy to AWS
+### 4. Deploy
 ```bash
-# Install dependencies
 npm install
-
-# Deploy infrastructure
 cd terraform
 
-# Create backend config from your tfvars
+# Create backend config
 cat > backend.hcl << EOF
 bucket = "$(grep terraform_state_bucket terraform.tfvars | cut -d'"' -f2)"
 region = "$(grep aws_region terraform.tfvars | cut -d'"' -f2)"
@@ -70,121 +74,45 @@ terraform init -backend-config=backend.hcl
 terraform apply
 ```
 
-That's it! 🎉 Your bot is live and webhook is automatically registered!
+## Usage
 
-## 💬 How to use
-
-### Send notifications via HTTP
+Send notifications via HTTP POST:
 ```bash
 curl -X POST "https://your-api-url/webhook" \
   -H "Content-Type: application/json" \
-  -d '{"message": {"text": "🚀 Deployment completed!"}}'
+  -d '{"message": {"text": "Deployment completed!"}}'
 ```
 
-### Message your bot directly
-Just send any message to your bot on Telegram - it will echo it back to you!
-
-### Integrate with CI/CD
-Perfect for GitHub Actions, Jenkins, or any system that can send HTTP requests.
-
-## 💰 Cost Optimization
-
-Configured for **minimal AWS costs**:
-- 💸 **Lambda**: 2 concurrent executions max
-- 🚦 **API Gateway**: 5 requests/second limit  
-- 📊 **CloudWatch**: 7-day log retention
-- 💵 **Estimated cost**: ~$0.10-0.50/month
-
-Ideal for personal projects and small-scale notifications!
-
-## 🔒 Security Features
-
-- ✅ **Access control** - only your chat ID can use the bot
-- 🚨 **Intrusion alerts** - get notified of unauthorized access attempts  
-- 🛡️ **Input validation** - request size limits and sanitization
-- 🚦 **Rate limiting** - prevents abuse (5 requests/second)
-- 🔐 **Secure logging** - no sensitive data in CloudWatch
-- 🎯 **Restricted permissions** - minimal IAM roles
-
-## 🛠️ Development
+## Development
 
 ```bash
-npm run build    # 📦 Build TypeScript
-npm run dev      # 👀 Watch mode for development
-npm run terraform:deploy   # 🚀 Deploy via Terraform
-
-terraform plan   # 📋 Preview infrastructure changes
-terraform apply  # ✅ Apply changes
+npm run build              # Build TypeScript
+npm run dev                # Watch mode
+npm run terraform:deploy   # Deploy infrastructure
 ```
 
-## 🔄 CI/CD with GitHub Actions
+## GitHub Actions CI/CD
 
-This project includes automated deployment via GitHub Actions. To enable it:
+The project includes automated deployment. To set up:
 
-### Required GitHub Secrets
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
 
-Add these to your repository (`Settings` → `Secrets and variables` → `Actions`):
+2. Fill in your values in `.env`
 
-### Required Secrets
+3. Add the same secrets to your GitHub repository settings (`Settings` → `Secrets and variables` → `Actions`)
 
-#### 🔑 Authentication (choose one method):
+**Choose one authentication method:**
+- **Option A:** Set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
+- **Option B (recommended):** Set `TERRAFORM_ROLE` with IAM role ARN for OIDC
 
-**Option A: AWS Access Keys**
-```
-AWS_ACCESS_KEY_ID       # Your AWS access key
-AWS_SECRET_ACCESS_KEY   # Your AWS secret key
-```
-
-**Option B: AWS IAM Role (OIDC - recommended)**
-```
-TERRAFORM_ROLE          # ARN of IAM role for OIDC auth
-```
-
-#### 🏗️ Terraform State
-```
-TERRAFORM_STATE_BUCKET  # S3 bucket name for Terraform state
-```
-
-#### 🤖 Telegram Configuration
-```
-TELEGRAM_BOT_TOKEN      # Your bot token from @BotFather
-TELEGRAM_CHAT_ID        # Your chat ID (number)
-```
-
-#### 🛡️ Security Scanning (optional)
-```
-BEARER_TOKEN           # Bearer API token for security scanning
-```
-
-### 🚀 How it works
-
-- **Security workflow**: Runs on every pull request to scan for vulnerabilities
-- **Deploy workflow**: Runs on push to `master` branch to deploy changes
-- **Dependabot**: Automatically creates PRs for dependency updates
-
-After setup, just push to `master` and your bot will be deployed automatically! 🎉
-
-## 🗂️ Project Structure
-
-```
-├── 🤖 src/
-│   ├── handler.ts      # Lambda entry point
-│   ├── telegram.ts     # Telegram API client
-│   └── utils.ts        # Utility functions
-├── 🏗️ terraform/       # Infrastructure as Code
-├── 🔄 .github/         # CI/CD workflows
-└── 📚 README.md        # You are here!
-```
-
-## 🧹 Cleanup
-
-When you're done:
-```bash
-cd terraform
-terraform destroy  # 🗑️ Remove all AWS resources
-```
-
----
+**Always required:**
+- `TERRAFORM_STATE_BUCKET` - S3 bucket for state
+- `TELEGRAM_BOT_TOKEN` - Your bot token
+- `TELEGRAM_CHAT_ID` - Your chat ID
+- `AWS_REGION` - AWS region
+- `TELEGRAM_API_URL` - Telegram API URL
 
 **Built with ❤️ by [Domen Gabrovšek](https://github.com/domengabrovsek)**  
-*Secure • Serverless • Simple*
