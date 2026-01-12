@@ -54,14 +54,26 @@ variable "telegram_bot_token" {
   }
 }
 
-variable "telegram_chat_id" {
-  description = "Telegram chat ID where messages will be sent. Can be a user ID (positive number) or group/channel ID (negative number)"
+variable "telegram_admin_chat_id" {
+  description = "Admin Telegram chat ID that receives security alerts and is authorized to use the bot. Can be a user ID (positive number) or group/channel ID (negative number)"
   type        = string
   sensitive   = true
-  
+
   validation {
-    condition = can(regex("^-?[0-9]+$", var.telegram_chat_id))
-    error_message = "Telegram chat ID must be a number (positive for users, negative for groups/channels)."
+    condition = can(regex("^-?[0-9]+$", var.telegram_admin_chat_id))
+    error_message = "Telegram admin chat ID must be a number (positive for users, negative for groups/channels)."
+  }
+}
+
+variable "telegram_chat_ids" {
+  description = "Optional comma-separated list of additional authorized Telegram chat IDs (e.g., '123456789,987654321'). Leave empty if only admin chat is needed."
+  type        = string
+  sensitive   = true
+  default     = ""
+
+  validation {
+    condition = var.telegram_chat_ids == "" || can(regex("^-?[0-9]+(,-?[0-9]+)*$", var.telegram_chat_ids))
+    error_message = "Telegram chat IDs must be comma-separated numbers with no spaces (e.g., '123456789,987654321')."
   }
 }
 
