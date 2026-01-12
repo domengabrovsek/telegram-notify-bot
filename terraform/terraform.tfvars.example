@@ -11,7 +11,8 @@ stage_name = "prod"
 
 # Telegram Configuration (required)
 telegram_bot_token = "123456789:your_bot_token_here"
-telegram_chat_id = "your_chat_id_here"
+telegram_admin_chat_id = "your_admin_chat_id_here"  # Admin chat that receives security alerts
+telegram_chat_ids = ""  # Optional: comma-separated additional chat IDs (e.g., "123456789,987654321")
 
 # Optional Configuration
 lambda_timeout = 15

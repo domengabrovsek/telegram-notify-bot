@@ -57,7 +57,7 @@ data "archive_file" "lambda_zip" {
 # IAM role for Lambda function
 resource "aws_iam_role" "lambda_role" {
   name        = "${var.project_name}-lambda-role"
-  description = "IAM role for ${var.project_name} Lambda function - managed by Terraform"
+  description = "Execution role for ${var.project_name} Lambda function (Telegram notification bot). Grants CloudWatch Logs access. Managed by Terraform."
   tags        = var.tags
 
   assume_role_policy = jsonencode({
@@ -97,7 +97,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 resource "aws_lambda_function" "telegram_bot" {
   filename         = data.archive_file.lambda_zip.output_path
   function_name    = var.project_name
-  description      = "${var.project_name} Telegram notification bot - managed by Terraform"
+  description      = "Telegram notification bot handler. Receives messages via API Gateway webhook and sends them to authorized Telegram chats. Managed by Terraform."
   role            = aws_iam_role.lambda_role.arn
   handler         = "index.handler"
   runtime         = "nodejs22.x"
@@ -109,9 +109,10 @@ resource "aws_lambda_function" "telegram_bot" {
 
   environment {
     variables = {
-      TELEGRAM_BOT_TOKEN = var.telegram_bot_token
-      TELEGRAM_CHAT_ID   = var.telegram_chat_id
-      NODE_ENV          = "production"
+      TELEGRAM_BOT_TOKEN      = var.telegram_bot_token
+      TELEGRAM_ADMIN_CHAT_ID  = var.telegram_admin_chat_id
+      TELEGRAM_CHAT_IDS       = var.telegram_chat_ids
+      NODE_ENV                = "production"
     }
   }
 
@@ -133,7 +134,7 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
 # API Gateway REST API
 resource "aws_api_gateway_rest_api" "telegram_api" {
   name        = "${var.project_name}-api"
-  description = "API Gateway for ${var.project_name} Telegram bot webhook - managed by Terraform"
+  description = "REST API for Telegram bot webhook. Receives POST requests at /webhook endpoint and invokes Lambda function. Managed by Terraform."
   
   endpoint_configuration {
     types = ["REGIONAL"]
@@ -192,6 +193,7 @@ resource "aws_api_gateway_integration" "lambda_integration" {
 # API Gateway Deployment
 resource "aws_api_gateway_deployment" "telegram_deployment" {
   rest_api_id = aws_api_gateway_rest_api.telegram_api.id
+  description = "Deployment of Telegram bot webhook API. Auto-redeployed on configuration changes. Managed by Terraform."
 
   triggers = {
     redeployment = sha1(jsonencode([
@@ -213,6 +215,7 @@ resource "aws_api_gateway_stage" "telegram_stage" {
   deployment_id = aws_api_gateway_deployment.telegram_deployment.id
   rest_api_id   = aws_api_gateway_rest_api.telegram_api.id
   stage_name    = var.stage_name
+  description   = "Production stage for Telegram bot webhook API. Throttled to 5 req/s with error-only logging. Managed by Terraform."
   tags = var.tags
 }
 
