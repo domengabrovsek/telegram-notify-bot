@@ -1,10 +1,11 @@
 import { request } from 'undici';
 
 export interface TelegramMessage {
-  update_id: number;
+  update_id?: number;
+  chat_id?: string; // For direct API calls
   message: {
-    message_id: number;
-    from: {
+    message_id?: number;
+    from?: {
       id: number;
       is_bot: boolean;
       first_name: string;
@@ -12,19 +13,19 @@ export interface TelegramMessage {
       username: string;
       language_code: string;
     };
-    chat: {
+    chat?: {
       id: number;
       first_name: string;
       last_name: string;
       username: string;
       type: string;
     };
-    date: number;
+    date?: number;
     text: string;
   };
 }
 
-export const sendMessage = async (text: string) => {
+export const sendMessage = async (text: string, chatId: string) => {
   if (!text || typeof text !== 'string') return;
 
   // Validate message length (Telegram limit is 4096 characters)
@@ -33,14 +34,13 @@ export const sendMessage = async (text: string) => {
   }
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
 
   if (!token) {
     throw new Error('TELEGRAM_BOT_TOKEN is not set');
   }
 
   if (!chatId) {
-    throw new Error('TELEGRAM_CHAT_ID is not set');
+    throw new Error('chat_id is required');
   }
 
   // Use POST request with JSON body instead of query parameters to avoid token exposure in logs
