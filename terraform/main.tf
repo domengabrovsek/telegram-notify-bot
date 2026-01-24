@@ -174,7 +174,7 @@ resource "aws_lambda_function" "telegram_bot" {
   description      = "Telegram notification bot handler. Receives messages via API Gateway webhook and sends them to authorized Telegram chats. Managed by Terraform."
   role            = aws_iam_role.lambda_role.arn
   handler         = "index.handler"
-  runtime         = "nodejs22.x"
+  runtime         = "nodejs24.x"
   timeout         = var.lambda_timeout
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 
