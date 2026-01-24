@@ -1,8 +1,11 @@
 import { sendMessage, type TelegramMessage } from './telegram';
 import { parseJson } from './utils';
+import { getTelegramConfig } from './ssm-client';
 
 export const handler = async (event: { body: string}) => {
   try {
+    // Fetch configuration from Parameter Store (no caching per requirement)
+    const config = await getTelegramConfig();
     // Validate event structure
     if (!event || !event.body || typeof event.body !== 'string') {
       console.error('Invalid event structure');
@@ -30,19 +33,8 @@ export const handler = async (event: { body: string}) => {
       return { statusCode: 200, body: JSON.stringify({ message: 'Empty message ignored' }) };
     }
 
-    // Get admin chat ID from environment
-    const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID?.trim();
-
-    if (!adminChatId) {
-      console.error('TELEGRAM_ADMIN_CHAT_ID environment variable is not set');
-      return { statusCode: 500, body: JSON.stringify({ error: 'Server configuration error' }) };
-    }
-
-    // Get additional authorized chat IDs from environment
-    const additionalChatIds = process.env.TELEGRAM_CHAT_IDS?.split(',').map(id => id.trim()).filter(Boolean) || [];
-
     // Combine admin and additional chat IDs for authorization check
-    const authorizedChatIds = [adminChatId, ...additionalChatIds];
+    const authorizedChatIds = [config.adminChatId, ...config.additionalChatIds];
 
     // Determine chat ID from request
     let targetChatId: string | undefined;
@@ -64,7 +56,7 @@ Message: "${body.message.text}"
 Time: ${new Date().toISOString()}`;
 
         try {
-          await sendMessage(alertMessage, adminChatId);
+          await sendMessage(alertMessage, config.adminChatId, config.botToken);
         } catch (error) {
           console.error('Failed to send security alert:', error);
         }
@@ -87,7 +79,7 @@ Message: "${body.message.text}"
 Time: ${new Date().toISOString()}`;
 
         try {
-          await sendMessage(alertMessage, adminChatId);
+          await sendMessage(alertMessage, config.adminChatId, config.botToken);
         } catch (error) {
           console.error('Failed to send security alert:', error);
         }
@@ -100,7 +92,7 @@ Time: ${new Date().toISOString()}`;
       return { statusCode: 400, body: JSON.stringify({ error: 'chat_id is required' }) };
     }
 
-    await sendMessage(message, targetChatId);
+    await sendMessage(message, targetChatId, config.botToken);
     console.log(`Message sent successfully to chat ${targetChatId}: ${message}`);
 
     return {
@@ -108,6 +100,15 @@ Time: ${new Date().toISOString()}`;
       body: JSON.stringify({ message: 'Message sent successfully', chat_id: targetChatId })
     };
   } catch (error) {
+    // Enhanced error logging for SSM failures
+    if (error instanceof Error && error.message.includes('Parameter Store')) {
+      console.error('Configuration error:', error.message);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Server configuration error - check logs' })
+      };
+    }
+
     console.error('Handler error:', error instanceof Error ? error.message : 'Unknown error');
     return {
       statusCode: 500,

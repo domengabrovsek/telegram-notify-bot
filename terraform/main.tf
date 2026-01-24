@@ -35,6 +35,7 @@ resource "null_resource" "build_lambda" {
     telegram_ts   = filemd5("${path.module}/../src/telegram.ts")
     utils_ts      = filemd5("${path.module}/../src/utils.ts")
     handler_ts    = can(filemd5("${path.module}/../src/handler.ts")) ? filemd5("${path.module}/../src/handler.ts") : ""
+    ssm_client_ts = can(filemd5("${path.module}/../src/ssm-client.ts")) ? filemd5("${path.module}/../src/ssm-client.ts") : ""
     package_json  = filemd5("${path.module}/../package.json")
   }
 
@@ -93,6 +94,79 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+# SSM Parameters for secrets management
+resource "aws_ssm_parameter" "bot_token" {
+  name        = "/telegram-notify-bot/bot-token"
+  description = "Telegram bot token from @BotFather. Used for API authentication. Managed by Terraform."
+  type        = "SecureString"
+  value       = var.telegram_bot_token
+  tags        = var.tags
+
+  lifecycle {
+    ignore_changes = [value]  # Prevent updates from overwriting manual rotations
+  }
+}
+
+resource "aws_ssm_parameter" "admin_chat_id" {
+  name        = "/telegram-notify-bot/admin-chat-id"
+  description = "Admin Telegram chat ID for security alerts and authorization. Managed by Terraform."
+  type        = "SecureString"
+  value       = var.telegram_admin_chat_id
+  tags        = var.tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+}
+
+resource "aws_ssm_parameter" "additional_chat_ids" {
+  name        = "/telegram-notify-bot/additional-chat-ids"
+  description = "Comma-separated list of additional authorized Telegram chat IDs. Managed by Terraform."
+  type        = "SecureString"
+  value       = var.telegram_chat_ids != "" ? var.telegram_chat_ids : "none"
+  tags        = var.tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+}
+
+# IAM policy for SSM Parameter Store access
+resource "aws_iam_role_policy" "lambda_ssm_access" {
+  name = "${var.project_name}-ssm-access"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowSSMParameterRead"
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters"
+        ]
+        Resource = [
+          "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/telegram-notify-bot/*"
+        ]
+      },
+      {
+        Sid    = "AllowKMSDecrypt"
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "kms:ViaService" = "ssm.${var.aws_region}.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+}
+
 # Lambda function
 resource "aws_lambda_function" "telegram_bot" {
   filename         = data.archive_file.lambda_zip.output_path
@@ -109,10 +183,9 @@ resource "aws_lambda_function" "telegram_bot" {
 
   environment {
     variables = {
-      TELEGRAM_BOT_TOKEN      = var.telegram_bot_token
-      TELEGRAM_ADMIN_CHAT_ID  = var.telegram_admin_chat_id
-      TELEGRAM_CHAT_IDS       = var.telegram_chat_ids
-      NODE_ENV                = "production"
+      NODE_ENV = "production"
+      # AWS region is automatically available via AWS_REGION environment variable
+      # SSM parameter names are hardcoded in application code
     }
   }
 
@@ -120,7 +193,11 @@ resource "aws_lambda_function" "telegram_bot" {
 
   depends_on = [
     aws_iam_role_policy_attachment.lambda_basic_execution,
+    aws_iam_role_policy.lambda_ssm_access,
     aws_cloudwatch_log_group.lambda_logs,
+    aws_ssm_parameter.bot_token,
+    aws_ssm_parameter.admin_chat_id,
+    aws_ssm_parameter.additional_chat_ids,
   ]
 }
 
@@ -254,10 +331,11 @@ resource "null_resource" "register_webhook" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Registering webhook with Telegram..."
-      RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${var.telegram_bot_token}/setWebhook" \
+      TOKEN=$(aws ssm get-parameter --name "/telegram-notify-bot/bot-token" --with-decryption --query 'Parameter.Value' --output text --region ${var.aws_region})
+      RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot$TOKEN/setWebhook" \
         -H "Content-Type: application/json" \
         -d '{"url": "https://${aws_api_gateway_rest_api.telegram_api.id}.execute-api.${var.aws_region}.amazonaws.com/${var.stage_name}/webhook"}')
-      
+
       if echo "$RESPONSE" | grep -q '"ok":true'; then
         echo "✅ Webhook registered successfully!"
         echo "Webhook URL: https://${aws_api_gateway_rest_api.telegram_api.id}.execute-api.${var.aws_region}.amazonaws.com/${var.stage_name}/webhook"
