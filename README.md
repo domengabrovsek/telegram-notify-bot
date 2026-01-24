@@ -20,7 +20,7 @@ Serverless Telegram bot for sending notifications via AWS Lambda.
 | `aws_profile` | No | AWS CLI profile (optional, uses default if empty) | `my-sso-profile` |
 | `terraform_state_bucket` | Yes | S3 bucket name for Terraform state | `my-terraform-state` |
 | `telegram_bot_token` | Yes | Bot token from @BotFather | `123456789:ABCdef...` |
-| `telegram_chat_id` | Yes | Your Telegram chat ID | `12345678` |
+| `telegram_chat_ids` | Yes | Your Telegram chat IDs | `12345678,12345678` |
 | `project_name` | Yes | Project identifier | `telegram-notify-bot` |
 
 ### GitHub Actions Secrets
@@ -30,7 +30,7 @@ Serverless Telegram bot for sending notifications via AWS Lambda.
 | `AWS_REGION` | Yes | AWS region for deployment | `eu-central-1` |
 | `TERRAFORM_STATE_BUCKET` | Yes | S3 bucket name for Terraform state | `my-terraform-state` |
 | `TELEGRAM_BOT_TOKEN` | Yes | Bot token from @BotFather | `123456789:ABCdef...` |
-| `TELEGRAM_CHAT_ID` | Yes | Your Telegram chat ID | `12345678` |
+| `TELEGRAM_CHAT_IDS` | Yes | Your Telegram chat IDs | `12345678,12345678` |
 | `TELEGRAM_API_URL` | Yes | Telegram API base URL | `https://api.telegram.org` |
 | `TERRAFORM_ROLE` | Yes* | IAM role ARN for OIDC authentication | `arn:aws:iam::123456789:role/...` |
 
