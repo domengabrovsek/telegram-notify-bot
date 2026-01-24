@@ -8,4 +8,6 @@ on:
 jobs:
   send-pr-updated-notification:
     uses: domengabrovsek/github-actions/.github/workflows/pr-updated.yml@master
-    secrets: inherit
+    with:
+      api_url: ${{ vars.TELEGRAM_API_URL }}
+      chat_id: ${{ vars.TELEGRAM_CHAT_ID }}

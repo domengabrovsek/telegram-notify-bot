@@ -9,4 +9,6 @@ jobs:
   send-pr-merged-notification:
     if: github.event.pull_request.merged == true
     uses: domengabrovsek/github-actions/.github/workflows/pr-merged.yml@master
-    secrets: inherit
+    with:
+      api_url: ${{ vars.TELEGRAM_API_URL }}
+      chat_id: ${{ vars.TELEGRAM_CHAT_ID }}

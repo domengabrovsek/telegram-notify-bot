@@ -25,7 +25,7 @@ export interface TelegramMessage {
   };
 }
 
-export const sendMessage = async (text: string, chatId: string) => {
+export const sendMessage = async (text: string, chatId: string, botToken: string) => {
   if (!text || typeof text !== 'string') return;
 
   // Validate message length (Telegram limit is 4096 characters)
@@ -33,10 +33,8 @@ export const sendMessage = async (text: string, chatId: string) => {
     throw new Error('Message too long');
   }
 
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-
-  if (!token) {
-    throw new Error('TELEGRAM_BOT_TOKEN is not set');
+  if (!botToken) {
+    throw new Error('Bot token is not provided');
   }
 
   if (!chatId) {
@@ -44,7 +42,7 @@ export const sendMessage = async (text: string, chatId: string) => {
   }
 
   // Use POST request with JSON body instead of query parameters to avoid token exposure in logs
-  const url = `https://api.telegram.org/bot${token}/sendMessage`;
+  const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
   
   try {
     const { statusCode, body } = await request(url, {
