@@ -28,7 +28,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v6
 
-    # Setup Node.js using version from .nvmrc file (Node 22)
+    # Setup Node.js using version from .nvmrc file (Node 24)
     - name: Setup Node.js
       uses: actions/setup-node@v5
       with:
@@ -86,7 +86,7 @@ jobs:
         terraform plan \
           -var="telegram_bot_token=${{ secrets.TELEGRAM_BOT_TOKEN }}" \
           -var="telegram_admin_chat_id=${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}" \
-          -var="telegram_chat_ids=${{ secrets.TELEGRAM_CHAT_IDS }}" \
+          -var='telegram_chat_ids=${{ secrets.TELEGRAM_CHAT_IDS || 'none' }}' \
           -var="terraform_state_bucket=${{ secrets.TERRAFORM_STATE_BUCKET }}" \
           -var="project_name=${{ env.PROJECT_NAME }}" \
           -var="aws_region=${{ env.AWS_REGION }}"
@@ -98,7 +98,7 @@ jobs:
         terraform apply -auto-approve \
           -var="telegram_bot_token=${{ secrets.TELEGRAM_BOT_TOKEN }}" \
           -var="telegram_admin_chat_id=${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}" \
-          -var="telegram_chat_ids=${{ secrets.TELEGRAM_CHAT_IDS }}" \
+          -var='telegram_chat_ids=${{ secrets.TELEGRAM_CHAT_IDS || 'none' }}' \
           -var="terraform_state_bucket=${{ secrets.TERRAFORM_STATE_BUCKET }}" \
           -var="project_name=${{ env.PROJECT_NAME }}" \
           -var="aws_region=${{ env.AWS_REGION }}"
@@ -111,13 +111,20 @@ jobs:
         echo "WEBHOOK_URL=$WEBHOOK_URL" >> $GITHUB_ENV
         echo "✅ Webhook URL configured (masked for security)"
 
-    # Send test notification to verify deployment works
-    - name: Send deployment notification
-      run: |
-        echo "📱 Sending deployment notification..."
-        curl -s -X POST "${{ env.WEBHOOK_URL }}" \
-             -H "Content-Type: application/json" \
-             -d '{"message": {"text": "🚀 Telegram bot deployed successfully via GitHub Actions!"}}' \
-             -o /dev/null \
-             && echo "✅ Test notification sent successfully!" \
-             || echo "⚠️ Test notification failed, but deployment succeeded"
+  # Send deployment success notification
+  notify:
+    name: Send Deployment Notification
+    needs: deploy
+    if: success()
+    uses: domengabrovsek/github-actions/.github/workflows/send-telegram-message.yml@master
+    with:
+      api_url: ${{ vars.TELEGRAM_API_URL }}
+      chat_id: ${{ vars.TELEGRAM_CHAT_ID }}
+      message: |
+        🚀 Deployment Successful!
+
+        📦 Project: telegram-notify-bot
+        🌿 Branch: ${{ github.ref_name }}
+        👤 Deployed by: ${{ github.actor }}
+        📝 Commit: ${{ github.event.head_commit.message }}
+        🔗 Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
