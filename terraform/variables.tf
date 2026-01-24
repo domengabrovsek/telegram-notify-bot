@@ -69,11 +69,11 @@ variable "telegram_chat_ids" {
   description = "Optional comma-separated list of additional authorized Telegram chat IDs (e.g., '123456789,987654321'). Leave empty if only admin chat is needed."
   type        = string
   sensitive   = true
-  default     = ""
+  default     = "none"
 
   validation {
-    condition = var.telegram_chat_ids == "" || can(regex("^-?[0-9]+(,-?[0-9]+)*$", var.telegram_chat_ids))
-    error_message = "Telegram chat IDs must be comma-separated numbers with no spaces (e.g., '123456789,987654321')."
+    condition = var.telegram_chat_ids == "none" || can(regex("^-?[0-9]+(,-?[0-9]+)*$", var.telegram_chat_ids))
+    error_message = "Telegram chat IDs must be comma-separated numbers with no spaces (e.g., '123456789,987654321'), or 'none' for no additional chats."
   }
 }
 

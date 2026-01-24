@@ -123,7 +123,7 @@ resource "aws_ssm_parameter" "additional_chat_ids" {
   name        = "/telegram-notify-bot/additional-chat-ids"
   description = "Comma-separated list of additional authorized Telegram chat IDs. Managed by Terraform."
   type        = "SecureString"
-  value       = var.telegram_chat_ids != "" ? var.telegram_chat_ids : "none"
+  value       = var.telegram_chat_ids
   tags        = var.tags
 
   lifecycle {
