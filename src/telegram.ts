@@ -52,8 +52,8 @@ export const sendMessage = async (text: string, chatId: string, botToken: string
       },
       body: JSON.stringify({
         chat_id: chatId,
-        text: text,
-        parse_mode: 'HTML' // Allow basic HTML formatting
+        text: text
+        // No parse_mode - send as plain text to avoid parsing errors
       })
     });
 
