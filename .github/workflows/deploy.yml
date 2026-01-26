@@ -19,10 +19,25 @@ env:
   PROJECT_NAME: telegram-notify-bot
 
 jobs:
+  notify-start:
+    name: Notify Deployment Start
+    uses: domengabrovsek/github-actions/.github/workflows/send-telegram-message.yml@master
+    with:
+      api_url: ${{ vars.TELEGRAM_API_URL }}
+      chat_id: ${{ vars.TELEGRAM_CHAT_ID }}
+      message: |
+        🚀 Telegram Bot Deployment Started
+
+        📦 Project: telegram-notify-bot
+        🌿 Branch: ${{ github.ref_name }}
+        👤 Triggered by: ${{ github.actor }}
+        📝 Commit: ${{ github.event.head_commit.message }}
+
   deploy:
     name: Deploy to AWS
+    needs: notify-start
     runs-on: ubuntu-latest
-    
+
     steps:
     # Checkout repository code
     - name: Checkout
@@ -84,7 +99,6 @@ jobs:
       working-directory: ./terraform
       run: |
         terraform plan \
-          -var="telegram_bot_token=${{ secrets.TELEGRAM_BOT_TOKEN }}" \
           -var="terraform_state_bucket=${{ secrets.TERRAFORM_STATE_BUCKET }}" \
           -var="project_name=${{ env.PROJECT_NAME }}" \
           -var="aws_region=${{ env.AWS_REGION }}"
@@ -94,7 +108,6 @@ jobs:
       working-directory: ./terraform
       run: |
         terraform apply -auto-approve \
-          -var="telegram_bot_token=${{ secrets.TELEGRAM_BOT_TOKEN }}" \
           -var="terraform_state_bucket=${{ secrets.TERRAFORM_STATE_BUCKET }}" \
           -var="project_name=${{ env.PROJECT_NAME }}" \
           -var="aws_region=${{ env.AWS_REGION }}"
@@ -108,8 +121,8 @@ jobs:
         echo "✅ Webhook URL configured (masked for security)"
 
   # Send deployment success notification
-  notify:
-    name: Send Deployment Notification
+  notify-success:
+    name: Notify Deployment Success
     needs: deploy
     if: success()
     uses: domengabrovsek/github-actions/.github/workflows/send-telegram-message.yml@master
@@ -117,10 +130,30 @@ jobs:
       api_url: ${{ vars.TELEGRAM_API_URL }}
       chat_id: ${{ vars.TELEGRAM_CHAT_ID }}
       message: |
-        🚀 Deployment Successful!
+        ✅ Telegram Bot Deployed Successfully!
 
         📦 Project: telegram-notify-bot
         🌿 Branch: ${{ github.ref_name }}
         👤 Deployed by: ${{ github.actor }}
         📝 Commit: ${{ github.event.head_commit.message }}
         🔗 Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+  # Send deployment failure notification
+  notify-failure:
+    name: Notify Deployment Failure
+    needs: deploy
+    if: failure()
+    uses: domengabrovsek/github-actions/.github/workflows/send-telegram-message.yml@master
+    with:
+      api_url: ${{ vars.TELEGRAM_API_URL }}
+      chat_id: ${{ vars.TELEGRAM_CHAT_ID }}
+      message: |
+        ❌ Telegram Bot Deployment Failed!
+
+        📦 Project: telegram-notify-bot
+        🌿 Branch: ${{ github.ref_name }}
+        👤 Triggered by: ${{ github.actor }}
+        📝 Commit: ${{ github.event.head_commit.message }}
+        🔗 Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+        ⚠️ Check logs for details
