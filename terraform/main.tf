@@ -95,6 +95,8 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 }
 
 # SSM Parameters for secrets management
+# Terraform creates these with placeholder values on first apply
+# Update the actual values manually in AWS Systems Manager Console/CLI
 resource "aws_ssm_parameter" "bot_token" {
   name        = "/telegram-notify-bot/bot-token"
   description = "Telegram bot token from @BotFather. Used for API authentication. Managed by Terraform."
@@ -103,7 +105,7 @@ resource "aws_ssm_parameter" "bot_token" {
   tags        = var.tags
 
   lifecycle {
-    ignore_changes = [value]  # Prevent updates from overwriting manual rotations
+    ignore_changes = [value]  # Prevent Terraform from overwriting manual updates
   }
 }
 

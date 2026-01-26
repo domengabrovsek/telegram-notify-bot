@@ -55,26 +55,17 @@ variable "telegram_bot_token" {
 }
 
 variable "telegram_admin_chat_id" {
-  description = "Admin Telegram chat ID that receives security alerts and is authorized to use the bot. Can be a user ID (positive number) or group/channel ID (negative number)"
+  description = "PLACEHOLDER admin chat ID. Terraform creates the parameter with this value. Update the actual value in AWS Systems Manager Console after first deploy."
   type        = string
   sensitive   = true
-
-  validation {
-    condition = can(regex("^-?[0-9]+$", var.telegram_admin_chat_id))
-    error_message = "Telegram admin chat ID must be a number (positive for users, negative for groups/channels)."
-  }
+  default     = "000000000"  # Placeholder - update in SSM after creation
 }
 
 variable "telegram_chat_ids" {
-  description = "Optional comma-separated list of additional authorized Telegram chat IDs (e.g., '123456789,987654321'). Leave empty if only admin chat is needed."
+  description = "PLACEHOLDER additional chat IDs. Terraform creates the parameter with this value. Update the actual value in AWS Systems Manager Console after first deploy."
   type        = string
   sensitive   = true
   default     = "none"
-
-  validation {
-    condition = var.telegram_chat_ids == "none" || can(regex("^-?[0-9]+(,-?[0-9]+)*$", var.telegram_chat_ids))
-    error_message = "Telegram chat IDs must be comma-separated numbers with no spaces (e.g., '123456789,987654321'), or 'none' for no additional chats."
-  }
 }
 
 variable "lambda_timeout" {
