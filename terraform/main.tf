@@ -14,7 +14,7 @@ terraform {
       version = "~> 3.2"
     }
   }
-  
+
   # Remote state backend for S3 (partial configuration)
   backend "s3" {
     key     = "telegram-bot/terraform.tfstate"
@@ -40,16 +40,16 @@ resource "null_resource" "build_lambda" {
   }
 
   provisioner "local-exec" {
-    command = "npm install && npm run build"
+    command     = "npm install && npm run build"
     working_dir = "${path.module}/.."
   }
 }
 
 # Create ZIP archive of the bundled Lambda function
 data "archive_file" "lambda_zip" {
-  type        = "zip"
-  output_path = "${path.module}/lambda_function.zip"
-  source_file = "${path.module}/../dist/index.js"
+  type             = "zip"
+  output_path      = "${path.module}/lambda_function.zip"
+  source_file      = "${path.module}/../dist/index.js"
   output_file_mode = "0666"
 
   depends_on = [null_resource.build_lambda]
@@ -105,7 +105,7 @@ resource "aws_ssm_parameter" "bot_token" {
   tags        = var.tags
 
   lifecycle {
-    ignore_changes = [value]  # Prevent Terraform from overwriting manual updates
+    ignore_changes = [value] # Prevent Terraform from overwriting manual updates
   }
 }
 
@@ -174,10 +174,10 @@ resource "aws_lambda_function" "telegram_bot" {
   filename         = data.archive_file.lambda_zip.output_path
   function_name    = var.project_name
   description      = "Telegram notification bot handler. Receives messages via API Gateway webhook and sends them to authorized Telegram chats. Managed by Terraform."
-  role            = aws_iam_role.lambda_role.arn
-  handler         = "index.handler"
-  runtime         = "nodejs24.x"
-  timeout         = var.lambda_timeout
+  role             = aws_iam_role.lambda_role.arn
+  handler          = "index.handler"
+  runtime          = "nodejs24.x"
+  timeout          = var.lambda_timeout
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 
   # Security: Set reserved concurrency to prevent runaway costs (low for notifications)
@@ -214,7 +214,7 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
 resource "aws_api_gateway_rest_api" "telegram_api" {
   name        = "${var.project_name}-api"
   description = "REST API for Telegram bot webhook. Receives POST requests at /webhook endpoint and invokes Lambda function. Managed by Terraform."
-  
+
   endpoint_configuration {
     types = ["REGIONAL"]
   }
@@ -240,10 +240,10 @@ resource "aws_api_gateway_method" "webhook_post" {
   resource_id   = aws_api_gateway_resource.webhook.id
   http_method   = "POST"
   authorization = "NONE"
-  
+
   # Request validation
   request_validator_id = aws_api_gateway_request_validator.webhook_validator.id
-  
+
   # Require JSON content type
   request_models = {
     "application/json" = "Empty"
@@ -265,8 +265,8 @@ resource "aws_api_gateway_integration" "lambda_integration" {
   http_method = aws_api_gateway_method.webhook_post.http_method
 
   integration_http_method = "POST"
-  type                   = "AWS_PROXY"
-  uri                    = aws_lambda_function.telegram_bot.invoke_arn
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.telegram_bot.invoke_arn
 }
 
 # API Gateway Deployment
@@ -295,7 +295,7 @@ resource "aws_api_gateway_stage" "telegram_stage" {
   rest_api_id   = aws_api_gateway_rest_api.telegram_api.id
   stage_name    = var.stage_name
   description   = "Production stage for Telegram bot webhook API. Throttled to 5 req/s with error-only logging. Managed by Terraform."
-  tags = var.tags
+  tags          = var.tags
 }
 
 # Method throttling settings
@@ -305,11 +305,11 @@ resource "aws_api_gateway_method_settings" "webhook_throttling" {
   method_path = "${aws_api_gateway_resource.webhook.path_part}/${aws_api_gateway_method.webhook_post.http_method}"
 
   settings {
-    throttling_rate_limit   = 5     # requests per second (more than enough for notifications)
-    throttling_burst_limit  = 10    # burst capacity (cost-optimized)
+    throttling_rate_limit  = 5       # requests per second (more than enough for notifications)
+    throttling_burst_limit = 10      # burst capacity (cost-optimized)
     logging_level          = "ERROR" # Only log errors to minimize CloudWatch costs
-    data_trace_enabled     = false  # Disable to reduce costs
-    metrics_enabled        = false  # Disable to reduce costs (can enable if needed)
+    data_trace_enabled     = false   # Disable to reduce costs
+    metrics_enabled        = false   # Disable to reduce costs (can enable if needed)
   }
 }
 
