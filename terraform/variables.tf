@@ -44,10 +44,11 @@ variable "stage_name" {
 }
 
 variable "telegram_bot_token" {
-  description = "Telegram bot token obtained from @BotFather. Format: 123456789:ABCdefGHIjklMNOpqrSTUvwxYZ"
+  description = "PLACEHOLDER Telegram bot token. Terraform creates the parameter with this value. Update the actual value in AWS Systems Manager Console after first deploy."
   type        = string
   sensitive   = true
-  
+  default     = "000000000:PLACEHOLDER_UPDATE_IN_SSM_AFTER_DEPLOY"
+
   validation {
     condition = can(regex("^[0-9]+:[A-Za-z0-9_-]+$", var.telegram_bot_token))
     error_message = "Telegram bot token must be in format: 123456789:ABCdefGHIjklMNOpqrSTUvwxYZ"
