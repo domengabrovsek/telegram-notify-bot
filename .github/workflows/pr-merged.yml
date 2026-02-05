@@ -5,6 +5,9 @@ on:
     types: [closed]
     branches: [master]
 
+permissions:
+  pull-requests: read
+
 jobs:
   send-pr-merged-notification:
     if: github.event.pull_request.merged == true

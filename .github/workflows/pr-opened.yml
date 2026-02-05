@@ -5,6 +5,9 @@ on:
     types: [opened]
     branches: [master]
 
+permissions:
+  pull-requests: read
+
 jobs:
   send-pr-opened-notification:
     uses: domengabrovsek/github-actions/.github/workflows/pr-opened.yml@master
