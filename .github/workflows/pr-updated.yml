@@ -5,6 +5,9 @@ on:
     types: [synchronize]
     branches: [master]
 
+permissions:
+  pull-requests: read
+
 jobs:
   send-pr-updated-notification:
     uses: domengabrovsek/github-actions/.github/workflows/pr-updated.yml@master
