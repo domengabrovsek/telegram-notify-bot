@@ -17,7 +17,7 @@ terraform {
 
   # Remote state backend for S3 (partial configuration)
   backend "s3" {
-    key     = "telegram-bot/terraform.tfstate"
+    key     = "telegram-notify-bot/terraform.tfstate"
     encrypt = true
     # bucket and region are provided via backend-config or backend.hcl
   }
@@ -92,22 +92,6 @@ data "aws_caller_identity" "current" {}
 resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-# Import existing SSM parameters into Terraform state
-import {
-  to = aws_ssm_parameter.bot_token
-  id = "/telegram-notify-bot/bot-token"
-}
-
-import {
-  to = aws_ssm_parameter.admin_chat_id
-  id = "/telegram-notify-bot/admin-chat-id"
-}
-
-import {
-  to = aws_ssm_parameter.additional_chat_ids
-  id = "/telegram-notify-bot/additional-chat-ids"
 }
 
 # SSM Parameters for secrets management
