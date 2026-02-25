@@ -2,12 +2,35 @@
 
 Serverless Telegram bot for sending notifications via AWS Lambda.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    Caller["GitHub Actions\n/ HTTP Client"]
+    APIGW["API Gateway\nPOST /webhook"]
+    Lambda["Lambda"]
+    SSM["SSM\nParameter Store"]
+    Telegram["Telegram API"]
+    EB["EventBridge\nevery 5 min"]
+
+    Caller -->|POST| APIGW
+    APIGW --> Lambda
+    Lambda -->|cached, 1-hour TTL| SSM
+    Lambda -->|retry + backoff| Telegram
+    EB -->|warmup ping| Lambda
+```
+
+- **API Gateway** receives POST webhooks and forwards to Lambda
+- **Lambda** fetches config from SSM Parameter Store (cached in-memory, 1-hour TTL) and sends messages via Telegram API with retry/backoff
+- **EventBridge** pings Lambda every 5 minutes to keep it warm (eliminates cold starts)
+- **SSM Parameter Store** stores bot token and chat IDs (encrypted at rest)
+
 ## Prerequisites
 
 - [Telegram Bot Token](https://t.me/botfather) (create with @BotFather)
 - AWS account with CLI configured
 - [OpenTofu](https://opentofu.org) v1.6+
-- Node.js 22+
+- Node.js 24+
 - S3 bucket for OpenTofu state
 
 ## Environment Variables
@@ -20,8 +43,10 @@ Serverless Telegram bot for sending notifications via AWS Lambda.
 | `aws_profile` | No | AWS CLI profile (optional, uses default if empty) | `my-sso-profile` |
 | `terraform_state_bucket` | Yes | S3 bucket name for OpenTofu state | `my-terraform-state` |
 | `telegram_bot_token` | Yes | Bot token from @BotFather | `123456789:ABCdef...` |
-| `telegram_chat_id` | Yes | Your Telegram chat ID | `12345678` |
+| `telegram_admin_chat_id` | Yes | Admin Telegram chat ID | `12345678` |
+| `telegram_chat_ids` | No | Additional authorized chat IDs (comma-separated) | `-100123,-100456` |
 | `project_name` | Yes | Project identifier | `telegram-notify-bot` |
+| `lambda_reserved_concurrency` | No | Max concurrent Lambda executions (default: 10) | `10` |
 
 ### GitHub Actions Secrets
 
@@ -55,7 +80,7 @@ aws_region             = "eu-central-1"
 aws_profile            = ""  # Optional
 terraform_state_bucket = "your-terraform-state-bucket"
 telegram_bot_token     = "123456789:your_bot_token_here"
-telegram_chat_id       = "your_chat_id_here"
+telegram_admin_chat_id = "your_chat_id_here"
 project_name           = "telegram-notify-bot"
 ```
 
@@ -80,7 +105,7 @@ Send notifications via HTTP POST:
 ```bash
 curl -X POST "https://your-api-url/webhook" \
   -H "Content-Type: application/json" \
-  -d '{"message": {"text": "Deployment completed!"}}'
+  -d '{"chat_id": "YOUR_CHAT_ID", "message": {"text": "Deployment completed!"}}'
 ```
 
 ## Development
@@ -102,7 +127,7 @@ The project includes automated deployment. To set up:
 
 2. Fill in your values in `.env`
 
-3. Add the same secrets to your GitHub repository settings (`Settings` → `Secrets and variables` → `Actions`)
+3. Add the same secrets to your GitHub repository settings (`Settings` -> `Secrets and variables` -> `Actions`)
 
 **Choose one authentication method:**
 - **Option A:** Set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
@@ -115,4 +140,4 @@ The project includes automated deployment. To set up:
 - `AWS_REGION` - AWS region
 - `TELEGRAM_API_URL` - Telegram API URL
 
-**Built with ❤️ by [Domen Gabrovšek](https://github.com/domengabrovsek)**  
+**Built with ❤️ by [Domen Gabrovšek](https://github.com/domengabrovsek)**

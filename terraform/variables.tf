@@ -80,7 +80,16 @@ variable "lambda_timeout" {
   }
 }
 
-# lambda_reserved_concurrency variable removed - now hardcoded to 2 for cost optimization
+variable "lambda_reserved_concurrency" {
+  description = "Maximum concurrent Lambda executions"
+  type        = number
+  default     = 10
+
+  validation {
+    condition     = var.lambda_reserved_concurrency >= 1 && var.lambda_reserved_concurrency <= 100
+    error_message = "Lambda reserved concurrency must be between 1 and 100."
+  }
+}
 
 variable "log_retention_days" {
   description = "CloudWatch log retention in days"
