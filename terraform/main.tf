@@ -57,9 +57,8 @@ data "archive_file" "lambda_zip" {
 
 # IAM role for Lambda function
 resource "aws_iam_role" "lambda_role" {
-  name        = "${var.project_name}-lambda-role"
-  description = "Execution role for ${var.project_name} Lambda function (Telegram notification bot). Grants CloudWatch Logs access. Managed by OpenTofu."
-  tags        = var.tags
+  name = "${var.project_name}-lambda-role"
+  tags = var.tags
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -180,8 +179,8 @@ resource "aws_lambda_function" "telegram_bot" {
   timeout          = var.lambda_timeout
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 
-  # Security: Set reserved concurrency to prevent runaway costs (low for notifications)
-  reserved_concurrent_executions = 2
+  # Reserved concurrency to prevent runaway costs while handling burst traffic
+  reserved_concurrent_executions = var.lambda_reserved_concurrency
 
   environment {
     variables = {
@@ -305,8 +304,8 @@ resource "aws_api_gateway_method_settings" "webhook_throttling" {
   method_path = "${aws_api_gateway_resource.webhook.path_part}/${aws_api_gateway_method.webhook_post.http_method}"
 
   settings {
-    throttling_rate_limit  = 5       # requests per second (more than enough for notifications)
-    throttling_burst_limit = 10      # burst capacity (cost-optimized)
+    throttling_rate_limit  = 20      # requests per second (headroom for burst traffic)
+    throttling_burst_limit = 40      # burst capacity (allows concurrent deployments)
     logging_level          = "ERROR" # Only log errors to minimize CloudWatch costs
     data_trace_enabled     = false   # Disable to reduce costs
     metrics_enabled        = false   # Disable to reduce costs (can enable if needed)
@@ -354,4 +353,25 @@ resource "null_resource" "register_webhook" {
     aws_api_gateway_stage.telegram_stage,
     aws_lambda_permission.api_gateway_lambda
   ]
+}
+
+# EventBridge rule to keep Lambda warm (every 5 minutes)
+resource "aws_cloudwatch_event_rule" "lambda_warmup" {
+  name                = "${var.project_name}-warmup"
+  description         = "Pings Lambda every 5 minutes to keep it warm and avoid cold starts. Managed by OpenTofu."
+  schedule_expression = "rate(5 minutes)"
+  tags                = var.tags
+}
+
+resource "aws_cloudwatch_event_target" "lambda_warmup" {
+  rule = aws_cloudwatch_event_rule.lambda_warmup.name
+  arn  = aws_lambda_function.telegram_bot.arn
+}
+
+resource "aws_lambda_permission" "eventbridge_warmup" {
+  statement_id  = "AllowExecutionFromEventBridge"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.telegram_bot.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.lambda_warmup.arn
 }

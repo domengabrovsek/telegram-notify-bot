@@ -3,6 +3,29 @@ import { SSMClient, GetParameterCommand, GetParameterCommandInput } from '@aws-s
 // Initialize SSM client (reuses connection across invocations in same container)
 const ssmClient = new SSMClient({ region: process.env.AWS_REGION || 'eu-central-1' });
 
+// In-memory parameter cache (persists across warm Lambda invocations)
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+interface CacheEntry {
+  value: string;
+  expiresAt: number;
+}
+
+const parameterCache = new Map<string, CacheEntry>();
+
+function getCachedValue(key: string): string | undefined {
+  const entry = parameterCache.get(key);
+  if (entry && Date.now() < entry.expiresAt) {
+    return entry.value;
+  }
+  parameterCache.delete(key);
+  return undefined;
+}
+
+function setCachedValue(key: string, value: string): void {
+  parameterCache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
+}
+
 /**
  * Fetches a parameter from AWS Systems Manager Parameter Store
  * @param parameterName - Full parameter name (e.g., /telegram-notify-bot/bot-token)
@@ -11,6 +34,11 @@ const ssmClient = new SSMClient({ region: process.env.AWS_REGION || 'eu-central-
  * @throws Error if parameter doesn't exist or cannot be fetched
  */
 export async function getParameter(parameterName: string, description: string): Promise<string> {
+  const cached = getCachedValue(parameterName);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   try {
     const input: GetParameterCommandInput = {
       Name: parameterName,
@@ -24,6 +52,7 @@ export async function getParameter(parameterName: string, description: string): 
       throw new Error(`Parameter ${parameterName} exists but has no value`);
     }
 
+    setCachedValue(parameterName, response.Parameter.Value);
     return response.Parameter.Value;
   } catch (error) {
     // Enhanced error messages for different failure scenarios
@@ -54,27 +83,22 @@ export async function getParameter(parameterName: string, description: string): 
  * @returns Object with bot token, admin chat ID, and additional chat IDs array
  */
 export async function getTelegramConfig() {
-  try {
-    // Fetch all parameters (no caching per user requirement)
-    const [botToken, adminChatId, additionalChatIds] = await Promise.all([
-      getParameter('/telegram-notify-bot/bot-token', 'Telegram bot token'),
-      getParameter('/telegram-notify-bot/admin-chat-id', 'Admin chat ID'),
-      getParameter('/telegram-notify-bot/additional-chat-ids', 'Additional chat IDs'),
-    ]);
+  // Fetch all parameters (cached in-memory with 5-min TTL)
+  const [botToken, adminChatId, additionalChatIds] = await Promise.all([
+    getParameter('/telegram-notify-bot/bot-token', 'Telegram bot token'),
+    getParameter('/telegram-notify-bot/admin-chat-id', 'Admin chat ID'),
+    getParameter('/telegram-notify-bot/additional-chat-ids', 'Additional chat IDs'),
+  ]);
 
-    // Parse additional chat IDs (handle "none" default value)
-    const additionalChatIdArray =
-      additionalChatIds === 'none' || additionalChatIds.trim() === ''
-        ? []
-        : additionalChatIds.split(',').map(id => id.trim()).filter(Boolean);
+  // Parse additional chat IDs (handle "none" default value)
+  const additionalChatIdArray =
+    additionalChatIds === 'none' || additionalChatIds.trim() === ''
+      ? []
+      : additionalChatIds.split(',').map(id => id.trim()).filter(Boolean);
 
-    return {
-      botToken,
-      adminChatId,
-      additionalChatIds: additionalChatIdArray,
-    };
-  } catch (error) {
-    // Re-throw with context
-    throw error;
-  }
+  return {
+    botToken,
+    adminChatId,
+    additionalChatIds: additionalChatIdArray,
+  };
 }

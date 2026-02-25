@@ -2,9 +2,14 @@ import { sendMessage, type TelegramMessage } from './telegram';
 import { parseJson } from './utils';
 import { getTelegramConfig } from './ssm-client';
 
-export const handler = async (event: { body: string}) => {
+export const handler = async (event: { body: string; source?: string }) => {
+  // EventBridge warmup ping — return immediately without SSM/Telegram calls
+  if (event.source === 'aws.events') {
+    return { statusCode: 200, body: JSON.stringify({ message: 'warmup' }) };
+  }
+
   try {
-    // Fetch configuration from Parameter Store (no caching per requirement)
+    // Fetch configuration from Parameter Store (cached in-memory with 1-hour TTL)
     const config = await getTelegramConfig();
     // Validate event structure
     if (!event || !event.body || typeof event.body !== 'string') {
