@@ -68,14 +68,13 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    # Setup Terraform CLI
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
+    # Setup OpenTofu CLI
+    - name: Setup OpenTofu
+      uses: opentofu/setup-opentofu@v1
       with:
-        terraform_version: 1.6.0
-        terraform_wrapper: false  # Disable wrapper for better output
+        tofu_version: 1.9.0
 
-    # Initialize Terraform backend and download providers
+    # Initialize OpenTofu backend and download providers
     # Create backend config dynamically from secrets and variables
     - name: Create Backend Config
       working-directory: ./terraform
@@ -85,38 +84,38 @@ jobs:
         region = "${{ env.AWS_REGION }}"
         EOF
 
-    - name: Terraform Init
+    - name: OpenTofu Init
       working-directory: ./terraform
-      run: terraform init -backend-config=backend.hcl
+      run: tofu init -backend-config=backend.hcl
 
-    # Validate Terraform configuration files
-    - name: Terraform Validate
+    # Validate OpenTofu configuration files
+    - name: OpenTofu Validate
       working-directory: ./terraform
-      run: terraform validate
+      run: tofu validate
 
     # Plan infrastructure changes (preview what will be deployed)
-    - name: Terraform Plan
+    - name: OpenTofu Plan
       working-directory: ./terraform
       run: |
-        terraform plan \
+        tofu plan \
           -var="terraform_state_bucket=${{ secrets.TERRAFORM_STATE_BUCKET }}" \
           -var="project_name=${{ env.PROJECT_NAME }}" \
           -var="aws_region=${{ env.AWS_REGION }}"
 
     # Apply infrastructure changes
-    - name: Terraform Apply
+    - name: OpenTofu Apply
       working-directory: ./terraform
       run: |
-        terraform apply -auto-approve \
+        tofu apply -auto-approve \
           -var="terraform_state_bucket=${{ secrets.TERRAFORM_STATE_BUCKET }}" \
           -var="project_name=${{ env.PROJECT_NAME }}" \
           -var="aws_region=${{ env.AWS_REGION }}"
 
-    # Extract webhook URL from Terraform outputs (masked for security)
+    # Extract webhook URL from OpenTofu outputs (masked for security)
     - name: Get webhook URL
       working-directory: ./terraform
       run: |
-        WEBHOOK_URL=$(terraform output -raw api_gateway_invoke_url)
+        WEBHOOK_URL=$(tofu output -raw api_gateway_invoke_url)
         echo "WEBHOOK_URL=$WEBHOOK_URL" >> $GITHUB_ENV
         echo "✅ Webhook URL configured (masked for security)"
 

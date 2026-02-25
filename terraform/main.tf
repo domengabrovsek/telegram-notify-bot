@@ -58,7 +58,7 @@ data "archive_file" "lambda_zip" {
 # IAM role for Lambda function
 resource "aws_iam_role" "lambda_role" {
   name        = "${var.project_name}-lambda-role"
-  description = "Execution role for ${var.project_name} Lambda function (Telegram notification bot). Grants CloudWatch Logs access. Managed by Terraform."
+  description = "Execution role for ${var.project_name} Lambda function (Telegram notification bot). Grants CloudWatch Logs access. Managed by OpenTofu."
   tags        = var.tags
 
   assume_role_policy = jsonencode({
@@ -99,7 +99,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 # Update the actual values manually in AWS Systems Manager Console/CLI
 resource "aws_ssm_parameter" "bot_token" {
   name        = "/telegram-notify-bot/bot-token"
-  description = "Telegram bot token from @BotFather. Used for API authentication. Managed by Terraform."
+  description = "Telegram bot token from @BotFather. Used for API authentication. Managed by OpenTofu."
   type        = "SecureString"
   value       = var.telegram_bot_token
   tags        = var.tags
@@ -111,7 +111,7 @@ resource "aws_ssm_parameter" "bot_token" {
 
 resource "aws_ssm_parameter" "admin_chat_id" {
   name        = "/telegram-notify-bot/admin-chat-id"
-  description = "Admin Telegram chat ID for security alerts and authorization. Managed by Terraform."
+  description = "Admin Telegram chat ID for security alerts and authorization. Managed by OpenTofu."
   type        = "SecureString"
   value       = var.telegram_admin_chat_id
   tags        = var.tags
@@ -123,7 +123,7 @@ resource "aws_ssm_parameter" "admin_chat_id" {
 
 resource "aws_ssm_parameter" "additional_chat_ids" {
   name        = "/telegram-notify-bot/additional-chat-ids"
-  description = "Comma-separated list of additional authorized Telegram chat IDs. Managed by Terraform."
+  description = "Comma-separated list of additional authorized Telegram chat IDs. Managed by OpenTofu."
   type        = "SecureString"
   value       = var.telegram_chat_ids
   tags        = var.tags
@@ -173,7 +173,7 @@ resource "aws_iam_role_policy" "lambda_ssm_access" {
 resource "aws_lambda_function" "telegram_bot" {
   filename         = data.archive_file.lambda_zip.output_path
   function_name    = var.project_name
-  description      = "Telegram notification bot handler. Receives messages via API Gateway webhook and sends them to authorized Telegram chats. Managed by Terraform."
+  description      = "Telegram notification bot handler. Receives messages via API Gateway webhook and sends them to authorized Telegram chats. Managed by OpenTofu."
   role             = aws_iam_role.lambda_role.arn
   handler          = "index.handler"
   runtime          = "nodejs24.x"
@@ -213,7 +213,7 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
 # API Gateway REST API
 resource "aws_api_gateway_rest_api" "telegram_api" {
   name        = "${var.project_name}-api"
-  description = "REST API for Telegram bot webhook. Receives POST requests at /webhook endpoint and invokes Lambda function. Managed by Terraform."
+  description = "REST API for Telegram bot webhook. Receives POST requests at /webhook endpoint and invokes Lambda function. Managed by OpenTofu."
 
   endpoint_configuration {
     types = ["REGIONAL"]
@@ -272,7 +272,7 @@ resource "aws_api_gateway_integration" "lambda_integration" {
 # API Gateway Deployment
 resource "aws_api_gateway_deployment" "telegram_deployment" {
   rest_api_id = aws_api_gateway_rest_api.telegram_api.id
-  description = "Deployment of Telegram bot webhook API. Auto-redeployed on configuration changes. Managed by Terraform."
+  description = "Deployment of Telegram bot webhook API. Auto-redeployed on configuration changes. Managed by OpenTofu."
 
   triggers = {
     redeployment = sha1(jsonencode([
@@ -294,7 +294,7 @@ resource "aws_api_gateway_stage" "telegram_stage" {
   deployment_id = aws_api_gateway_deployment.telegram_deployment.id
   rest_api_id   = aws_api_gateway_rest_api.telegram_api.id
   stage_name    = var.stage_name
-  description   = "Production stage for Telegram bot webhook API. Throttled to 5 req/s with error-only logging. Managed by Terraform."
+  description   = "Production stage for Telegram bot webhook API. Throttled to 5 req/s with error-only logging. Managed by OpenTofu."
   tags          = var.tags
 }
 

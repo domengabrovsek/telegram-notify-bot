@@ -99,6 +99,6 @@ variable "tags" {
   default = {
     Project     = "telegram-notify-bot"
     Environment = "prod"
-    ManagedBy   = "terraform"
+    ManagedBy   = "opentofu"
   }
 }
