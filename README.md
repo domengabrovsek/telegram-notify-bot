@@ -6,19 +6,19 @@ Serverless Telegram bot for sending notifications via AWS Lambda.
 
 - [Telegram Bot Token](https://t.me/botfather) (create with @BotFather)
 - AWS account with CLI configured
-- [Terraform](https://terraform.io) v1.6+
+- [OpenTofu](https://opentofu.org) v1.6+
 - Node.js 22+
-- S3 bucket for Terraform state
+- S3 bucket for OpenTofu state
 
 ## Environment Variables
 
-### Terraform Variables (`terraform.tfvars`)
+### OpenTofu Variables (`terraform.tfvars`)
 
 | Variable | Required | Description | Example |
 |----------|----------|-------------|---------|
 | `aws_region` | Yes | AWS region for deployment | `eu-central-1` |
 | `aws_profile` | No | AWS CLI profile (optional, uses default if empty) | `my-sso-profile` |
-| `terraform_state_bucket` | Yes | S3 bucket name for Terraform state | `my-terraform-state` |
+| `terraform_state_bucket` | Yes | S3 bucket name for OpenTofu state | `my-terraform-state` |
 | `telegram_bot_token` | Yes | Bot token from @BotFather | `123456789:ABCdef...` |
 | `telegram_chat_id` | Yes | Your Telegram chat ID | `12345678` |
 | `project_name` | Yes | Project identifier | `telegram-notify-bot` |
@@ -28,7 +28,7 @@ Serverless Telegram bot for sending notifications via AWS Lambda.
 | Variable | Required | Description | Example |
 |----------|----------|-------------|---------|
 | `AWS_REGION` | Yes | AWS region for deployment | `eu-central-1` |
-| `TERRAFORM_STATE_BUCKET` | Yes | S3 bucket name for Terraform state | `my-terraform-state` |
+| `TERRAFORM_STATE_BUCKET` | Yes | S3 bucket name for OpenTofu state | `my-terraform-state` |
 | `TELEGRAM_BOT_TOKEN` | Yes | Bot token from @BotFather | `123456789:ABCdef...` |
 | `TELEGRAM_CHAT_ID` | Yes | Your Telegram chat ID | `12345678` |
 | `TELEGRAM_API_URL` | Yes | Telegram API base URL | `https://api.telegram.org` |
@@ -48,7 +48,7 @@ Serverless Telegram bot for sending notifications via AWS Lambda.
 - Visit: `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates`
 - Find your chat ID in the response
 
-### 3. Configure Terraform
+### 3. Configure OpenTofu
 Create `terraform/terraform.tfvars`:
 ```hcl
 aws_region             = "eu-central-1"
@@ -70,8 +70,8 @@ bucket = "$(grep terraform_state_bucket terraform.tfvars | cut -d'"' -f2)"
 region = "$(grep aws_region terraform.tfvars | cut -d'"' -f2)"
 EOF
 
-terraform init -backend-config=backend.hcl
-terraform apply
+tofu init -backend-config=backend.hcl
+tofu apply
 ```
 
 ## Usage
@@ -88,7 +88,7 @@ curl -X POST "https://your-api-url/webhook" \
 ```bash
 npm run build              # Build TypeScript
 npm run dev                # Watch mode
-npm run terraform:deploy   # Deploy infrastructure
+npm run tofu:deploy        # Deploy infrastructure
 ```
 
 ## GitHub Actions CI/CD
@@ -109,7 +109,7 @@ The project includes automated deployment. To set up:
 - **Option B (recommended):** Set `TERRAFORM_ROLE` with IAM role ARN for OIDC
 
 **Always required:**
-- `TERRAFORM_STATE_BUCKET` - S3 bucket for state
+- `TERRAFORM_STATE_BUCKET` - S3 bucket for OpenTofu state
 - `TELEGRAM_BOT_TOKEN` - Your bot token
 - `TELEGRAM_CHAT_ID` - Your chat ID
 - `AWS_REGION` - AWS region

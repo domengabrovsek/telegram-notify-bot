@@ -1,7 +1,7 @@
 # ==============================================
 # Pull Request Workflow
 # ==============================================
-# Runs build verification, terraform validation,
+# Runs build verification, OpenTofu validation,
 # and security scans on pull requests
 
 name: Pull Request
@@ -48,31 +48,31 @@ jobs:
         run: test -f dist/index.js
 
   # ==============================================
-  # Terraform Validation
+  # OpenTofu Validation
   # ==============================================
-  terraform:
-    name: Terraform Validation
+  opentofu:
+    name: OpenTofu Validation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
         with:
-          terraform_version: 1.6.0
+          tofu_version: 1.9.0
 
-      - name: Terraform Format Check
+      - name: OpenTofu Format Check
         working-directory: ./terraform
-        run: terraform fmt -check
+        run: tofu fmt -check
 
-      - name: Terraform Init
+      - name: OpenTofu Init
         working-directory: ./terraform
-        run: terraform init -backend=false
+        run: tofu init -backend=false
 
-      - name: Terraform Validate
+      - name: OpenTofu Validate
         working-directory: ./terraform
-        run: terraform validate
+        run: tofu validate
 
   # ==============================================
   # Secret Detection
@@ -116,10 +116,10 @@ jobs:
           sarif_file: bearer-results.sarif
 
   # ==============================================
-  # Terraform Security Scan
+  # OpenTofu Security Scan
   # ==============================================
-  terraform-security:
-    name: Terraform Security Scan
+  opentofu-security:
+    name: OpenTofu Security Scan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
