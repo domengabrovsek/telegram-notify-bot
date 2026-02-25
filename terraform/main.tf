@@ -78,9 +78,9 @@ resource "aws_iam_role" "lambda_role" {
     ]
   })
 
-  # Prevent role deletion protection
   lifecycle {
     prevent_destroy = false
+    ignore_changes  = [description]
   }
 }
 
@@ -360,7 +360,6 @@ resource "aws_cloudwatch_event_rule" "lambda_warmup" {
   name                = "${var.project_name}-warmup"
   description         = "Pings Lambda every 5 minutes to keep it warm and avoid cold starts. Managed by OpenTofu."
   schedule_expression = "rate(5 minutes)"
-  tags                = var.tags
 }
 
 resource "aws_cloudwatch_event_target" "lambda_warmup" {
