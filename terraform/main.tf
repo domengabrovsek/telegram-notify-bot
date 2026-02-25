@@ -57,8 +57,9 @@ data "archive_file" "lambda_zip" {
 
 # IAM role for Lambda function
 resource "aws_iam_role" "lambda_role" {
-  name = "${var.project_name}-lambda-role"
-  tags = var.tags
+  name        = "${var.project_name}-lambda-role"
+  description = "Lambda execution role for ${var.project_name}"
+  tags        = var.tags
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -80,7 +81,6 @@ resource "aws_iam_role" "lambda_role" {
 
   lifecycle {
     prevent_destroy = false
-    ignore_changes  = [description]
   }
 }
 
@@ -98,7 +98,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 # Update the actual values manually in AWS Systems Manager Console/CLI
 resource "aws_ssm_parameter" "bot_token" {
   name        = "/telegram-notify-bot/bot-token"
-  description = "Telegram bot token from @BotFather. Used for API authentication. Managed by OpenTofu."
+  description = "Telegram bot token from @BotFather"
   type        = "SecureString"
   value       = var.telegram_bot_token
   tags        = var.tags
@@ -110,7 +110,7 @@ resource "aws_ssm_parameter" "bot_token" {
 
 resource "aws_ssm_parameter" "admin_chat_id" {
   name        = "/telegram-notify-bot/admin-chat-id"
-  description = "Admin Telegram chat ID for security alerts and authorization. Managed by OpenTofu."
+  description = "Admin Telegram chat ID for alerts and authorization"
   type        = "SecureString"
   value       = var.telegram_admin_chat_id
   tags        = var.tags
@@ -122,7 +122,7 @@ resource "aws_ssm_parameter" "admin_chat_id" {
 
 resource "aws_ssm_parameter" "additional_chat_ids" {
   name        = "/telegram-notify-bot/additional-chat-ids"
-  description = "Comma-separated list of additional authorized Telegram chat IDs. Managed by OpenTofu."
+  description = "Additional authorized Telegram chat IDs (comma-separated)"
   type        = "SecureString"
   value       = var.telegram_chat_ids
   tags        = var.tags
@@ -172,7 +172,7 @@ resource "aws_iam_role_policy" "lambda_ssm_access" {
 resource "aws_lambda_function" "telegram_bot" {
   filename         = data.archive_file.lambda_zip.output_path
   function_name    = var.project_name
-  description      = "Telegram notification bot handler. Receives messages via API Gateway webhook and sends them to authorized Telegram chats. Managed by OpenTofu."
+  description      = "Handles webhook requests and sends Telegram notifications"
   role             = aws_iam_role.lambda_role.arn
   handler          = "index.handler"
   runtime          = "nodejs24.x"
@@ -212,7 +212,7 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
 # API Gateway REST API
 resource "aws_api_gateway_rest_api" "telegram_api" {
   name        = "${var.project_name}-api"
-  description = "REST API for Telegram bot webhook. Receives POST requests at /webhook endpoint and invokes Lambda function. Managed by OpenTofu."
+  description = "Webhook API for ${var.project_name}"
 
   endpoint_configuration {
     types = ["REGIONAL"]
@@ -271,7 +271,7 @@ resource "aws_api_gateway_integration" "lambda_integration" {
 # API Gateway Deployment
 resource "aws_api_gateway_deployment" "telegram_deployment" {
   rest_api_id = aws_api_gateway_rest_api.telegram_api.id
-  description = "Deployment of Telegram bot webhook API. Auto-redeployed on configuration changes. Managed by OpenTofu."
+  description = "Auto-redeployed on API configuration changes"
 
   triggers = {
     redeployment = sha1(jsonencode([
@@ -293,7 +293,7 @@ resource "aws_api_gateway_stage" "telegram_stage" {
   deployment_id = aws_api_gateway_deployment.telegram_deployment.id
   rest_api_id   = aws_api_gateway_rest_api.telegram_api.id
   stage_name    = var.stage_name
-  description   = "Production stage for Telegram bot webhook API. Throttled to 5 req/s with error-only logging. Managed by OpenTofu."
+  description   = "Production stage with throttling and error-only logging"
   tags          = var.tags
 }
 
@@ -358,8 +358,9 @@ resource "null_resource" "register_webhook" {
 # EventBridge rule to keep Lambda warm (every 5 minutes)
 resource "aws_cloudwatch_event_rule" "lambda_warmup" {
   name                = "${var.project_name}-warmup"
-  description         = "Pings Lambda every 5 minutes to keep it warm and avoid cold starts. Managed by OpenTofu."
+  description         = "Pings Lambda every 5 min to avoid cold starts"
   schedule_expression = "rate(5 minutes)"
+  tags                = var.tags
 }
 
 resource "aws_cloudwatch_event_target" "lambda_warmup" {

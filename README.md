@@ -20,10 +20,27 @@ flowchart LR
     EB -->|warmup ping| Lambda
 ```
 
-- **API Gateway** receives POST webhooks and forwards to Lambda
-- **Lambda** fetches config from SSM Parameter Store (cached in-memory, 1-hour TTL) and sends messages via Telegram API with retry/backoff
-- **EventBridge** pings Lambda every 5 minutes to keep it warm (eliminates cold starts)
-- **SSM Parameter Store** stores bot token and chat IDs (encrypted at rest)
+- **API Gateway** — receives POST webhooks, throttled at 20 req/s with 40 burst
+- **Lambda** — fetches config from SSM (cached in-memory, 1-hour TTL), sends messages via Telegram API with retry and exponential backoff
+- **EventBridge** — pings Lambda every 5 min to avoid cold starts
+- **SSM Parameter Store** — stores bot token and chat IDs (encrypted at rest)
+- **CloudWatch Logs** — error-only logging with 7-day retention
+
+### AWS Resources Created
+
+| Resource | Description |
+|----------|-------------|
+| Lambda function | Handles webhook requests and sends Telegram notifications |
+| IAM role + policies | Lambda execution role with SSM read and KMS decrypt access |
+| API Gateway REST API | Webhook endpoint (`POST /webhook`) with request validation |
+| API Gateway stage | Production stage with throttling and error-only logging |
+| SSM parameters (x3) | Bot token, admin chat ID, additional chat IDs |
+| CloudWatch log group | Lambda logs with 7-day retention |
+| EventBridge rule | Pings Lambda every 5 min to avoid cold starts |
+
+### Deployment IAM Requirements
+
+The GitHub Actions deployment role needs permissions for: Lambda, API Gateway, IAM, SSM, KMS, CloudWatch Logs, EventBridge, S3 (state), and STS.
 
 ## Prerequisites
 
