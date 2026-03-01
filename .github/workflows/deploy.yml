@@ -60,7 +60,7 @@ jobs:
 
     # Configure AWS credentials using IAM role or access keys
     - name: Setup AWS credentials
-      uses: aws-actions/configure-aws-credentials@v5
+      uses: aws-actions/configure-aws-credentials@v6
       with:
         # Use IAM role if TERRAFORM_ROLE is set, otherwise fall back to access keys
         role-to-assume: ${{ secrets.TERRAFORM_ROLE }}
