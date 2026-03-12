@@ -13,7 +13,8 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "tofu:init": "cd terraform && tofu init -backend-config=backend.hcl",
-    "tofu:deploy": "cd terraform && tofu apply -auto-approve",
+    "tofu:plan": "cd terraform && tofu plan",
+    "tofu:apply": "cd terraform && tofu apply -auto-approve",
     "tofu:destroy": "cd terraform && tofu destroy -auto-approve",
     "clean": "rm -rf dist"
   },

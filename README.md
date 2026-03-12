@@ -51,7 +51,10 @@ npm run test         # Run tests
 npm run typecheck    # TypeScript type check
 npm run lint         # Biome lint & format check
 npm run lint:fix     # Auto-fix lint issues
-npm run tofu:deploy  # Deploy infrastructure
+npm run tofu:init    # Initialize OpenTofu backend
+npm run tofu:plan    # Preview infrastructure changes
+npm run tofu:apply   # Deploy infrastructure
+npm run tofu:destroy # Tear down infrastructure
 ```
 
 ## Documentation
