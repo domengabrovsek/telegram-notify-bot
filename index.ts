@@ -1,1 +1,1 @@
-export { handler } from './src/handler';
+export { handler } from '@/handler';

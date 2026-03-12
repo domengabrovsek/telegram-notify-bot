@@ -28,31 +28,13 @@ provider "aws" {
   profile = var.aws_profile != "" ? var.aws_profile : null
 }
 
-# Build the bundle using esbuild
-resource "null_resource" "build_lambda" {
-  triggers = {
-    index_ts      = filemd5("${path.module}/../index.ts")
-    telegram_ts   = filemd5("${path.module}/../src/telegram.ts")
-    utils_ts      = filemd5("${path.module}/../src/utils.ts")
-    handler_ts    = can(filemd5("${path.module}/../src/handler.ts")) ? filemd5("${path.module}/../src/handler.ts") : ""
-    ssm_client_ts = can(filemd5("${path.module}/../src/ssm-client.ts")) ? filemd5("${path.module}/../src/ssm-client.ts") : ""
-    package_json  = filemd5("${path.module}/../package.json")
-  }
-
-  provisioner "local-exec" {
-    command     = "npm install && npm run build"
-    working_dir = "${path.module}/.."
-  }
-}
-
-# Create ZIP archive of the bundled Lambda function
+# Build is expected to run before tofu apply (npm run build in CI or locally).
+# Terraform just zips the pre-built dist output.
 data "archive_file" "lambda_zip" {
   type             = "zip"
   output_path      = "${path.module}/lambda_function.zip"
-  source_file      = "${path.module}/../dist/index.js"
+  source_file      = "${path.module}/../dist/index.mjs"
   output_file_mode = "0666"
-
-  depends_on = [null_resource.build_lambda]
 }
 
 # IAM role for Lambda function
@@ -168,6 +150,27 @@ resource "aws_iam_role_policy" "lambda_ssm_access" {
   })
 }
 
+# SQS Dead Letter Queue for failed messages
+resource "aws_sqs_queue" "telegram_dlq" {
+  name                      = "${var.project_name}-dlq"
+  message_retention_seconds = 1209600 # 14 days
+  tags                      = var.tags
+}
+
+# SQS Queue for buffering incoming messages
+resource "aws_sqs_queue" "telegram_queue" {
+  name                       = "${var.project_name}-queue"
+  visibility_timeout_seconds = 60    # 4x Lambda timeout
+  message_retention_seconds  = 86400 # 1 day
+  receive_wait_time_seconds  = 20    # long polling
+  tags                       = var.tags
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.telegram_dlq.arn
+    maxReceiveCount     = 3
+  })
+}
+
 # Lambda function
 resource "aws_lambda_function" "telegram_bot" {
   filename         = data.archive_file.lambda_zip.output_path
@@ -195,11 +198,46 @@ resource "aws_lambda_function" "telegram_bot" {
   depends_on = [
     aws_iam_role_policy_attachment.lambda_basic_execution,
     aws_iam_role_policy.lambda_ssm_access,
+    aws_iam_role_policy.lambda_sqs_access,
     aws_cloudwatch_log_group.lambda_logs,
     aws_ssm_parameter.bot_token,
     aws_ssm_parameter.admin_chat_id,
     aws_ssm_parameter.additional_chat_ids,
   ]
+}
+
+# IAM policy for Lambda to consume from SQS
+resource "aws_iam_role_policy" "lambda_sqs_access" {
+  name = "${var.project_name}-sqs-access"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowSQSConsume"
+        Effect = "Allow"
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = [
+          aws_sqs_queue.telegram_queue.arn,
+          aws_sqs_queue.telegram_dlq.arn
+        ]
+      }
+    ]
+  })
+}
+
+# SQS -> Lambda event source mapping
+resource "aws_lambda_event_source_mapping" "sqs_trigger" {
+  event_source_arn                   = aws_sqs_queue.telegram_queue.arn
+  function_name                      = aws_lambda_function.telegram_bot.arn
+  batch_size                         = 1
+  function_response_types            = ["ReportBatchItemFailures"]
+  maximum_batching_window_in_seconds = 0
 }
 
 # CloudWatch Log Group
@@ -257,15 +295,85 @@ resource "aws_api_gateway_request_validator" "webhook_validator" {
   validate_request_parameters = true
 }
 
-# API Gateway Integration
+# IAM role for API Gateway -> SQS
+resource "aws_iam_role" "api_gateway_sqs_role" {
+  name        = "${var.project_name}-apigw-sqs-role"
+  description = "Allows API Gateway to send messages to SQS for ${var.project_name}"
+  tags        = var.tags
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "api_gateway_sqs_send" {
+  name = "${var.project_name}-apigw-sqs-send"
+  role = aws_iam_role.api_gateway_sqs_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "sqs:SendMessage"
+        Resource = aws_sqs_queue.telegram_queue.arn
+      }
+    ]
+  })
+}
+
+# API Gateway Integration - sends request body to SQS
 resource "aws_api_gateway_integration" "lambda_integration" {
+  rest_api_id             = aws_api_gateway_rest_api.telegram_api.id
+  resource_id             = aws_api_gateway_resource.webhook.id
+  http_method             = aws_api_gateway_method.webhook_post.http_method
+  integration_http_method = "POST"
+  type                    = "AWS"
+  uri                     = "arn:aws:apigateway:${var.aws_region}:sqs:path/${data.aws_caller_identity.current.account_id}/${aws_sqs_queue.telegram_queue.name}"
+  credentials             = aws_iam_role.api_gateway_sqs_role.arn
+
+  request_parameters = {
+    "integration.request.header.Content-Type" = "'application/x-www-form-urlencoded'"
+  }
+
+  request_templates = {
+    "application/json" = "Action=SendMessage&MessageBody=$util.urlEncode($input.body)"
+  }
+}
+
+# Method response for 200 OK
+resource "aws_api_gateway_method_response" "webhook_200" {
   rest_api_id = aws_api_gateway_rest_api.telegram_api.id
   resource_id = aws_api_gateway_resource.webhook.id
   http_method = aws_api_gateway_method.webhook_post.http_method
+  status_code = "200"
 
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.telegram_bot.invoke_arn
+  response_models = {
+    "application/json" = "Empty"
+  }
+}
+
+# Integration response - maps SQS success to 200
+resource "aws_api_gateway_integration_response" "webhook_200" {
+  rest_api_id = aws_api_gateway_rest_api.telegram_api.id
+  resource_id = aws_api_gateway_resource.webhook.id
+  http_method = aws_api_gateway_method.webhook_post.http_method
+  status_code = aws_api_gateway_method_response.webhook_200.status_code
+
+  response_templates = {
+    "application/json" = "{\"message\": \"queued\"}"
+  }
+
+  depends_on = [aws_api_gateway_integration.lambda_integration]
 }
 
 # API Gateway Deployment
@@ -278,6 +386,8 @@ resource "aws_api_gateway_deployment" "telegram_deployment" {
       aws_api_gateway_resource.webhook.id,
       aws_api_gateway_method.webhook_post.id,
       aws_api_gateway_integration.lambda_integration.id,
+      aws_api_gateway_method_response.webhook_200.id,
+      aws_api_gateway_integration_response.webhook_200.id,
     ]))
   }
 
@@ -285,7 +395,7 @@ resource "aws_api_gateway_deployment" "telegram_deployment" {
     create_before_destroy = true
   }
 
-  depends_on = [aws_api_gateway_method.webhook_post, aws_api_gateway_integration.lambda_integration]
+  depends_on = [aws_api_gateway_method.webhook_post, aws_api_gateway_integration.lambda_integration, aws_api_gateway_integration_response.webhook_200]
 }
 
 # API Gateway Stage
@@ -313,15 +423,6 @@ resource "aws_api_gateway_method_settings" "webhook_throttling" {
 }
 
 # API Gateway CloudWatch log group removed to minimize costs (access logging disabled)
-
-# Lambda permission for API Gateway
-resource "aws_lambda_permission" "api_gateway_lambda" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.telegram_bot.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.telegram_api.execution_arn}/${var.stage_name}/POST/webhook"
-}
 
 # Register webhook with Telegram after deployment
 resource "null_resource" "register_webhook" {
@@ -351,7 +452,6 @@ resource "null_resource" "register_webhook" {
   depends_on = [
     aws_api_gateway_deployment.telegram_deployment,
     aws_api_gateway_stage.telegram_stage,
-    aws_lambda_permission.api_gateway_lambda
   ]
 }
 

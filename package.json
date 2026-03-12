@@ -2,12 +2,19 @@
   "name": "telegram-notify-bot",
   "version": "1.0.0",
   "description": "Serverless Telegram bot for sending notifications. Deploy with one command to AWS Lambda.",
+  "type": "module",
   "main": "index.ts",
   "scripts": {
-    "build": "esbuild index.ts --bundle --platform=node --target=node24 --outfile=dist/index.js --external:@aws-sdk/*",
-    "dev": "esbuild index.ts --bundle --platform=node --target=node24 --outfile=dist/index.js --watch --external:@aws-sdk/*",
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
     "tofu:init": "cd terraform && tofu init -backend-config=backend.hcl",
-    "tofu:deploy": "cd terraform && tofu apply -auto-approve",
+    "tofu:plan": "cd terraform && tofu plan",
+    "tofu:apply": "cd terraform && tofu apply -auto-approve",
     "tofu:destroy": "cd terraform && tofu destroy -auto-approve",
     "clean": "rm -rf dist"
   },
@@ -31,11 +38,13 @@
   },
   "homepage": "https://github.com/domengabrovsek/telegram-notify-bot#readme",
   "devDependencies": {
+    "@biomejs/biome": "^2.4.6",
     "@types/node": "^24.10.1",
-    "esbuild": "^0.27.3"
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.0"
   },
   "dependencies": {
-    "undici": "^7.22.0",
     "@aws-sdk/client-ssm": "^3.1000.0"
   },
   "engines": {

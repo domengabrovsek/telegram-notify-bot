@@ -9,3 +9,13 @@ output "lambda_function_name" {
   value       = aws_lambda_function.telegram_bot.function_name
   sensitive   = true
 }
+
+output "sqs_queue_url" {
+  description = "URL of the SQS queue for message buffering"
+  value       = aws_sqs_queue.telegram_queue.url
+}
+
+output "sqs_dlq_url" {
+  description = "URL of the SQS dead letter queue for failed messages"
+  value       = aws_sqs_queue.telegram_dlq.url
+}
