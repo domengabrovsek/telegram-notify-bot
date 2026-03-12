@@ -16,7 +16,7 @@ export default defineConfig({
       fileName: () => 'index.mjs',
     },
     rollupOptions: {
-      external: [/^@aws-sdk\//, /^node:/, 'undici'],
+      external: [/^@aws-sdk\//, /^node:/],
     },
     minify: false,
     sourcemap: false,
