@@ -1,5 +1,4 @@
 import { setTimeout as sleep } from 'node:timers/promises';
-import { request } from 'undici';
 
 const MAX_RETRIES = 2;
 const BASE_BACKOFF_MS = 500;
@@ -31,38 +30,38 @@ export async function sendMessage(text: string, chatId: string, botToken: string
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const { statusCode, body } = await request(url, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: chatId, text }),
       });
 
-      if (statusCode === 200) {
+      if (response.status === 200) {
         return;
       }
 
-      const responseBody = (await body.json()) as Record<string, unknown>;
+      const responseBody = (await response.json()) as Record<string, unknown>;
       const errorDescription = (responseBody?.description as string) || 'Unknown error';
 
       // 4xx client errors (except 429 rate limit) are not retryable
-      if (statusCode >= 400 && statusCode < 500 && statusCode !== 429) {
-        console.error('Failed to send Telegram message:', { statusCode, error: errorDescription });
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        console.error('Failed to send Telegram message:', { statusCode: response.status, error: errorDescription });
         throw new Error('Failed to send message');
       }
 
-      if (isRetryable(statusCode) && attempt < MAX_RETRIES) {
+      if (isRetryable(response.status) && attempt < MAX_RETRIES) {
         const retryAfter =
-          statusCode === 429 && typeof responseBody?.retry_after === 'number'
+          response.status === 429 && typeof responseBody?.retry_after === 'number'
             ? (responseBody.retry_after as number) * 1000
             : BASE_BACKOFF_MS * 2 ** attempt;
         console.warn(
-          `Telegram API returned ${statusCode}, retrying in ${retryAfter}ms (attempt ${attempt + 1}/${MAX_RETRIES})`,
+          `Telegram API returned ${response.status}, retrying in ${retryAfter}ms (attempt ${attempt + 1}/${MAX_RETRIES})`,
         );
         await sleep(retryAfter);
         continue;
       }
 
-      console.error('Failed to send Telegram message:', { statusCode, error: errorDescription });
+      console.error('Failed to send Telegram message:', { statusCode: response.status, error: errorDescription });
       lastError = new Error('Failed to send message');
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Unknown error');
