@@ -58,9 +58,7 @@ describe('sendMessage', () => {
   });
 
   it('retries on 429 rate limit', async () => {
-    mockFetch
-      .mockResolvedValueOnce(mockResponse(429, { retry_after: 1 }))
-      .mockResolvedValueOnce(mockResponse(200));
+    mockFetch.mockResolvedValueOnce(mockResponse(429, { retry_after: 1 })).mockResolvedValueOnce(mockResponse(200));
 
     await sendMessage('hello', '123', 'token');
 
