@@ -160,9 +160,9 @@ resource "aws_sqs_queue" "telegram_dlq" {
 # SQS Queue for buffering incoming messages
 resource "aws_sqs_queue" "telegram_queue" {
   name                       = "${var.project_name}-queue"
-  visibility_timeout_seconds = 60 # 4x Lambda timeout
+  visibility_timeout_seconds = 60    # 4x Lambda timeout
   message_retention_seconds  = 86400 # 1 day
-  receive_wait_time_seconds  = 20 # long polling
+  receive_wait_time_seconds  = 20    # long polling
   tags                       = var.tags
 
   redrive_policy = jsonencode({
