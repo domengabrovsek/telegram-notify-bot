@@ -70,7 +70,7 @@ jobs:
 
     # Setup OpenTofu CLI
     - name: Setup OpenTofu
-      uses: opentofu/setup-opentofu@v1
+      uses: opentofu/setup-opentofu@v2
       with:
         tofu_version: 1.9.0
 
