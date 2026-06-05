@@ -16,9 +16,8 @@
     "exactOptionalPropertyTypes": false,
     "outDir": "dist",
     "types": ["vitest/globals"],
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*.ts", "index.ts", "vite.config.ts", "vitest.config.ts"],
