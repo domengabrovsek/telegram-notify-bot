@@ -5,10 +5,10 @@ permissions:
   id-token: write   # Required for AWS OIDC authentication
   contents: read    # Required to checkout repository
 
-# Trigger workflow on push to master branch
+# Trigger workflow on push to main branch
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   # Allow manual workflow runs for testing
   workflow_dispatch:
 
