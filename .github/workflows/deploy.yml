@@ -41,7 +41,7 @@ jobs:
     steps:
     # Checkout repository code
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     # Setup Node.js using version from .nvmrc file (Node 24)
     - name: Setup Node.js
