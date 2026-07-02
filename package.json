@@ -45,7 +45,7 @@
     "vitest": "4.1.9"
   },
   "dependencies": {
-    "@aws-sdk/client-ssm": "3.1063.0"
+    "@aws-sdk/client-ssm": "3.1077.0"
   },
   "engines": {
     "node": ">=24.0.0"
