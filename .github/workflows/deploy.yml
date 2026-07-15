@@ -21,7 +21,7 @@ env:
 jobs:
   notify-start:
     name: Notify Deployment Start
-    uses: domengabrovsek/github-actions/.github/workflows/send-telegram-message.yml@master
+    uses: domengabrovsek/github-actions/.github/workflows/send-telegram-message.yml@main
     with:
       api_url: ${{ vars.TELEGRAM_API_URL }}
       chat_id: ${{ vars.TELEGRAM_CHAT_ID }}
@@ -58,14 +58,11 @@ jobs:
     - name: Build application
       run: npm run build
 
-    # Configure AWS credentials using IAM role or access keys
+    # Assume the scoped OIDC deploy role (hub-managed, least-privilege)
     - name: Setup AWS credentials
       uses: aws-actions/configure-aws-credentials@v6
       with:
-        # Use IAM role if TERRAFORM_ROLE is set, otherwise fall back to access keys
-        role-to-assume: ${{ secrets.TERRAFORM_ROLE }}
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
         aws-region: ${{ env.AWS_REGION }}
 
     # Setup OpenTofu CLI
@@ -124,7 +121,7 @@ jobs:
     name: Notify Deployment Success
     needs: deploy
     if: success()
-    uses: domengabrovsek/github-actions/.github/workflows/send-telegram-message.yml@master
+    uses: domengabrovsek/github-actions/.github/workflows/send-telegram-message.yml@main
     with:
       api_url: ${{ vars.TELEGRAM_API_URL }}
       chat_id: ${{ vars.TELEGRAM_CHAT_ID }}
@@ -142,7 +139,7 @@ jobs:
     name: Notify Deployment Failure
     needs: deploy
     if: failure()
-    uses: domengabrovsek/github-actions/.github/workflows/send-telegram-message.yml@master
+    uses: domengabrovsek/github-actions/.github/workflows/send-telegram-message.yml@main
     with:
       api_url: ${{ vars.TELEGRAM_API_URL }}
       chat_id: ${{ vars.TELEGRAM_CHAT_ID }}
