@@ -3,8 +3,8 @@ import { getTelegramConfig } from '@/services/config';
 import { sendMessage } from '@/services/telegram-client';
 import { extractMessageText, parseAndValidateBody } from '@/validators/message-validator';
 
-// Processes a single raw message body from the SQS queue.
-// Handles both Telegram webhook updates and direct API calls.
+/* Processes a single raw message body from a Function URL request.
+   Handles both Telegram webhook updates and direct API calls. */
 export async function processMessage(rawBody: string): Promise<void> {
   const config = await getTelegramConfig();
   const body = parseAndValidateBody(rawBody);

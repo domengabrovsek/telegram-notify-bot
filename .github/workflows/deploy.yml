@@ -112,7 +112,7 @@ jobs:
     - name: Get webhook URL
       working-directory: ./terraform
       run: |
-        WEBHOOK_URL=$(tofu output -raw api_gateway_invoke_url)
+        WEBHOOK_URL=$(tofu output -raw webhook_url)
         echo "WEBHOOK_URL=$WEBHOOK_URL" >> $GITHUB_ENV
         echo "✅ Webhook URL configured (masked for security)"
 
