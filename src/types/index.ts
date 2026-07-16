@@ -1,23 +1,22 @@
-// SQS event types for Lambda invocation
-export interface SQSRecord {
-  messageId: string;
-  body: string;
-  eventSource: string;
-}
-
-export interface SQSEvent {
-  Records: SQSRecord[];
-}
-
-export interface SQSBatchResponse {
-  batchItemFailures: Array<{ itemIdentifier: string }>;
-}
-
+// EventBridge warmup ping
 export interface WarmupEvent {
   source?: string;
 }
 
-export type LambdaEvent = SQSEvent | WarmupEvent;
+/* Lambda Function URL request (payload format 2.0), trimmed to the fields the
+   handler reads. Telegram and the notify workflows POST the message body here. */
+export interface FunctionUrlEvent {
+  version: string;
+  requestContext: {
+    http: {
+      method: string;
+    };
+  };
+  body?: string;
+  isBase64Encoded?: boolean;
+}
+
+export type LambdaEvent = WarmupEvent | FunctionUrlEvent;
 
 // Telegram webhook/API message structure
 export interface TelegramFrom {

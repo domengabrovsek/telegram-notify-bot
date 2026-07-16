@@ -8,6 +8,13 @@ import { processMessage } from '@/services/message-processor';
 
 const mockProcessMessage = vi.mocked(processMessage);
 
+const functionUrlEvent = (body: string | undefined, isBase64Encoded = false) => ({
+  version: '2.0',
+  requestContext: { http: { method: 'POST' } },
+  body,
+  isBase64Encoded,
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -25,42 +32,44 @@ describe('handler', () => {
     });
   });
 
-  describe('SQS events', () => {
-    it('processes all records successfully', async () => {
+  describe('Function URL events', () => {
+    it('processes the request body and returns 200', async () => {
+      mockProcessMessage.mockResolvedValue();
+      const body = '{"message":{"text":"hello"},"chat_id":"123"}';
+
+      const result = await handler(functionUrlEvent(body));
+
+      expect(result).toEqual({ statusCode: 200, body: JSON.stringify({ ok: true }) });
+      expect(mockProcessMessage).toHaveBeenCalledWith(body);
+    });
+
+    it('decodes a base64-encoded body before processing', async () => {
+      mockProcessMessage.mockResolvedValue();
+      const body = '{"message":{"text":"hi"},"chat_id":"456"}';
+      const encoded = Buffer.from(body, 'utf-8').toString('base64');
+
+      const result = await handler(functionUrlEvent(encoded, true));
+
+      expect(result).toEqual({ statusCode: 200, body: JSON.stringify({ ok: true }) });
+      expect(mockProcessMessage).toHaveBeenCalledWith(body);
+    });
+
+    it('still returns 200 when processing throws (no queue retry)', async () => {
+      mockProcessMessage.mockRejectedValue(new Error('send failed'));
+
+      const result = await handler(functionUrlEvent('{"invalid":true}'));
+
+      expect(result).toEqual({ statusCode: 200, body: JSON.stringify({ ok: true }) });
+      expect(mockProcessMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('processes an empty body as an empty string', async () => {
       mockProcessMessage.mockResolvedValue();
 
-      const result = await handler({
-        Records: [
-          { messageId: 'msg-1', body: '{"message":{"text":"hello"},"chat_id":"123"}', eventSource: 'aws:sqs' },
-          { messageId: 'msg-2', body: '{"message":{"text":"world"},"chat_id":"456"}', eventSource: 'aws:sqs' },
-        ],
-      });
+      const result = await handler(functionUrlEvent(undefined));
 
-      expect(result).toEqual({ batchItemFailures: [] });
-      expect(mockProcessMessage).toHaveBeenCalledTimes(2);
-    });
-
-    it('reports failed records as batch item failures', async () => {
-      mockProcessMessage.mockResolvedValueOnce();
-      mockProcessMessage.mockRejectedValueOnce(new Error('send failed'));
-
-      const result = await handler({
-        Records: [
-          { messageId: 'msg-1', body: '{"message":{"text":"ok"},"chat_id":"123"}', eventSource: 'aws:sqs' },
-          { messageId: 'msg-2', body: 'invalid', eventSource: 'aws:sqs' },
-        ],
-      });
-
-      expect(result).toEqual({
-        batchItemFailures: [{ itemIdentifier: 'msg-2' }],
-      });
-    });
-
-    it('handles empty records array', async () => {
-      const result = await handler({ Records: [] });
-
-      expect(result).toEqual({ batchItemFailures: [] });
-      expect(mockProcessMessage).not.toHaveBeenCalled();
+      expect(result).toEqual({ statusCode: 200, body: JSON.stringify({ ok: true }) });
+      expect(mockProcessMessage).toHaveBeenCalledWith('');
     });
   });
 
