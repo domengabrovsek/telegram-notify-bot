@@ -21,17 +21,14 @@ env:
 jobs:
   notify-start:
     name: Notify Deployment Start
-    uses: domengabrovsek/github-actions/.github/workflows/send-telegram-message.yml@main
+    uses: domengabrovsek/github-actions/.github/workflows/telegram-notify.yml@main
     with:
       api_url: ${{ vars.TELEGRAM_API_URL }}
       chat_id: ${{ vars.TELEGRAM_CHAT_ID }}
-      message: |
-        🚀 Telegram Bot Deployment Started
-
-        📦 Project: telegram-notify-bot
-        🌿 Branch: ${{ github.ref_name }}
-        👤 Triggered by: ${{ github.actor }}
-        📝 Commit: ${{ github.event.head_commit.message }}
+      event_type: deploy_started
+      branch_head: ${{ github.ref_name }}
+      actor: ${{ github.actor }}
+      commit: ${{ github.event.head_commit.message }}
 
   deploy:
     name: Deploy to AWS
@@ -110,35 +107,27 @@ jobs:
     name: Notify Deployment Success
     needs: deploy
     if: success()
-    uses: domengabrovsek/github-actions/.github/workflows/send-telegram-message.yml@main
+    uses: domengabrovsek/github-actions/.github/workflows/telegram-notify.yml@main
     with:
       api_url: ${{ vars.TELEGRAM_API_URL }}
       chat_id: ${{ vars.TELEGRAM_CHAT_ID }}
-      message: |
-        ✅ Telegram Bot Deployed Successfully!
-
-        📦 Project: telegram-notify-bot
-        🌿 Branch: ${{ github.ref_name }}
-        👤 Deployed by: ${{ github.actor }}
-        📝 Commit: ${{ github.event.head_commit.message }}
-        🔗 Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      event_type: deploy_success
+      branch_head: ${{ github.ref_name }}
+      actor: ${{ github.actor }}
+      commit: ${{ github.event.head_commit.message }}
+      link: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   # Send deployment failure notification
   notify-failure:
     name: Notify Deployment Failure
     needs: deploy
     if: failure()
-    uses: domengabrovsek/github-actions/.github/workflows/send-telegram-message.yml@main
+    uses: domengabrovsek/github-actions/.github/workflows/telegram-notify.yml@main
     with:
       api_url: ${{ vars.TELEGRAM_API_URL }}
       chat_id: ${{ vars.TELEGRAM_CHAT_ID }}
-      message: |
-        ❌ Telegram Bot Deployment Failed!
-
-        📦 Project: telegram-notify-bot
-        🌿 Branch: ${{ github.ref_name }}
-        👤 Triggered by: ${{ github.actor }}
-        📝 Commit: ${{ github.event.head_commit.message }}
-        🔗 Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-        ⚠️ Check logs for details
+      event_type: deploy_failure
+      branch_head: ${{ github.ref_name }}
+      actor: ${{ github.actor }}
+      commit: ${{ github.event.head_commit.message }}
+      link: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
