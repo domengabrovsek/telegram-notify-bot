@@ -33,7 +33,6 @@ jobs:
       test_command: npm run test
       build_command: npm run build
       build_artifact_path: dist/index.mjs
-      install-args: --ignore-scripts
 
   # ==============================================
   # OpenTofu Validation
