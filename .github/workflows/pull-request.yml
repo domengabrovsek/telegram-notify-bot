@@ -23,54 +23,17 @@ permissions:
 
 jobs:
   # ==============================================
-  # Build Verification
+  # Node CI (lint / typecheck / test / build)
   # ==============================================
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci --ignore-scripts --no-progress --audit=false
-
-      - name: Build Lambda
-        run: npm run build
-
-      - name: Verify build output
-        run: test -f dist/index.mjs
-
-  # ==============================================
-  # Lint & Format
-  # ==============================================
-  lint:
-    name: Lint & Format
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci --ignore-scripts --no-progress --audit=false
-
-      - name: Biome check
-        run: npx biome check .
-
-      - name: Typecheck
-        run: npx tsc --noEmit
+  ci:
+    uses: domengabrovsek/github-actions/.github/workflows/node-ci.yml@main
+    with:
+      lint_command: npm run lint
+      typecheck_command: npm run typecheck
+      test_command: npm run test
+      build_command: npm run build
+      build_artifact_path: dist/index.mjs
+      install-args: --ignore-scripts
 
   # ==============================================
   # OpenTofu Validation
@@ -174,8 +137,7 @@ jobs:
     name: Gate
     if: always()
     needs:
-      - build
-      - lint
+      - ci
       - opentofu
       - gitleaks
       - bearer
@@ -184,17 +146,16 @@ jobs:
     timeout-minutes: 1
     steps:
       - name: Check results
+        env:
+          RESULTS: >-
+            ${{ needs.ci.result }}
+            ${{ needs.opentofu.result }}
+            ${{ needs.gitleaks.result }}
+            ${{ needs.bearer.result }}
+            ${{ needs.opentofu-security.result }}
         run: |
-          results=(
-            "${{ needs.build.result }}"
-            "${{ needs.lint.result }}"
-            "${{ needs.opentofu.result }}"
-            "${{ needs.gitleaks.result }}"
-            "${{ needs.bearer.result }}"
-            "${{ needs.opentofu-security.result }}"
-          )
-          for r in "${results[@]}"; do
-            if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then
+          for result in $RESULTS; do
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
               echo "One or more jobs failed or were cancelled."
               exit 1
             fi
