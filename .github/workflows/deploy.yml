@@ -42,8 +42,6 @@ jobs:
     # Checkout, setup Node from .nvmrc, and npm ci via the shared hub action
     - name: Setup Node and install dependencies
       uses: domengabrovsek/github-actions/.github/actions/setup-node-npm@main
-      with:
-        install-args: --ignore-scripts --no-progress --audit=false
 
     # Build TypeScript code for Lambda deployment
     - name: Build application
