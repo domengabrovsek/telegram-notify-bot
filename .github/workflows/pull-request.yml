@@ -98,7 +98,7 @@ jobs:
 
       - name: Upload Bearer SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v4.37.3
+        uses: github/codeql-action/upload-sarif@v4.37.9
         with:
           sarif_file: bearer-results.sarif
 
@@ -123,7 +123,7 @@ jobs:
 
       - name: Upload Trivy SARIF
         if: hashFiles('trivy-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v4.37.3
+        uses: github/codeql-action/upload-sarif@v4.37.9
         with:
           sarif_file: trivy-results.sarif
 
