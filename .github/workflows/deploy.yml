@@ -46,14 +46,14 @@ jobs:
 
     # Assume the scoped OIDC deploy role (hub-managed, least-privilege)
     - name: Setup AWS credentials
-      uses: aws-actions/configure-aws-credentials@v6
+      uses: domengabrovsek/github-actions/.github/actions/aws-credentials@main
       with:
         role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
         aws-region: ${{ env.AWS_REGION }}
 
     # Setup OpenTofu CLI
     - name: Setup OpenTofu
-      uses: opentofu/setup-opentofu@v2
+      uses: domengabrovsek/github-actions/.github/actions/setup-opentofu@main
       with:
         tofu_version: 1.9.0
 
