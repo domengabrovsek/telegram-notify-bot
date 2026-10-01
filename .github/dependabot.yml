@@ -1,49 +1,47 @@
+# One monthly pull request with every version update across all ecosystems, plus
+# one grouped pull request per ecosystem for security fixes. Same file in every repo.
 version: 2
+
+multi-ecosystem-groups:
+  dependencies:
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+      include: scope
+    labels:
+      - dependencies
+
 updates:
-  # Check for npm package updates monthly
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-      day: "monday"
-      time: "09:00"
-      timezone: "Europe/Ljubljana"
-    open-pull-requests-limit: 5
-    commit-message:
-      prefix: "npm"
-      include: "scope"
-    labels:
-      - "dependencies"
-      - "npm"
+  - package-ecosystem: npm
+    directory: /
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+    cooldown:
+      default-days: 7
+    groups:
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
 
-  # Check for GitHub Actions updates monthly  
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-      day: "monday" 
-      time: "09:00"
-      timezone: "Europe/Ljubljana"
-    open-pull-requests-limit: 3
-    commit-message:
-      prefix: "actions"
-      include: "scope"
-    labels:
-      - "dependencies"
-      - "github-actions"
+  - package-ecosystem: github-actions
+    directory: /
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+    cooldown:
+      default-days: 7
+    groups:
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
 
-  # Check for Terraform updates monthly
-  - package-ecosystem: "terraform"
-    directory: "/terraform"
-    schedule:
-      interval: "monthly"
-      day: "monday"
-      time: "09:00" 
-      timezone: "Europe/Ljubljana"
-    open-pull-requests-limit: 3
-    commit-message:
-      prefix: "terraform"
-      include: "scope"
-    labels:
-      - "dependencies"
-      - "terraform"
+  - package-ecosystem: terraform
+    directory: /terraform
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+    cooldown:
+      default-days: 7
+    groups:
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
