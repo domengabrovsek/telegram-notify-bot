@@ -18,7 +18,6 @@ export async function handleGitHubWebhook(
   rawBody: Buffer,
 ): Promise<HttpResponse> {
   const event = headers['x-github-event'] ?? '';
-  const delivery = headers['x-github-delivery'] ?? 'unknown';
 
   let secret: string;
   try {
@@ -29,7 +28,7 @@ export async function handleGitHubWebhook(
   }
 
   if (!isValidGitHubSignature(rawBody, headers['x-hub-signature-256'], secret)) {
-    console.warn(`Rejected GitHub webhook with invalid signature (event: ${event}, delivery: ${delivery})`);
+    console.warn('Rejected GitHub webhook with invalid signature');
     return respond(401, { error: 'Invalid signature' });
   }
 
@@ -41,7 +40,7 @@ export async function handleGitHubWebhook(
   try {
     payload = JSON.parse(rawBody.toString('utf-8')) as GitHubWebhookPayload;
   } catch {
-    console.warn(`GitHub webhook body is not JSON (event: ${event}, delivery: ${delivery})`);
+    console.warn('GitHub webhook body is not JSON');
     return respond(400, { error: 'Invalid JSON body' });
   }
 
@@ -54,13 +53,10 @@ export async function handleGitHubWebhook(
     const config = await getTelegramConfig();
     await sendMessage(message, config.adminChatId, config.botToken);
   } catch (error) {
-    console.error(
-      `Failed to send GitHub notification (event: ${event}, delivery: ${delivery}):`,
-      error instanceof Error ? error.message : 'Unknown error',
-    );
+    console.error('Failed to send GitHub notification:', error instanceof Error ? error.message : 'Unknown error');
     return respond(502, { error: 'Failed to send notification' });
   }
 
-  console.log(`GitHub notification sent (event: ${event}, action: ${payload.action ?? ''}, delivery: ${delivery})`);
+  console.log('GitHub notification sent');
   return respond(200, { ok: true });
 }
