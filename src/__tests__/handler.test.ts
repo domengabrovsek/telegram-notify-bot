@@ -4,13 +4,24 @@ vi.mock('@/services/message-processor', () => ({
   processMessage: vi.fn(),
 }));
 
+vi.mock('@/services/github-webhook', () => ({
+  handleGitHubWebhook: vi.fn(),
+}));
+
+import { handleGitHubWebhook } from '@/services/github-webhook';
 import { processMessage } from '@/services/message-processor';
 
 const mockProcessMessage = vi.mocked(processMessage);
+const mockHandleGitHubWebhook = vi.mocked(handleGitHubWebhook);
 
-const functionUrlEvent = (body: string | undefined, isBase64Encoded = false) => ({
+const functionUrlEvent = (
+  body: string | undefined,
+  isBase64Encoded = false,
+  headers: Record<string, string> = { 'content-type': 'application/json' },
+) => ({
   version: '2.0',
   requestContext: { http: { method: 'POST' } },
+  headers,
   body,
   isBase64Encoded,
 });
@@ -70,6 +81,40 @@ describe('handler', () => {
 
       expect(result).toEqual({ statusCode: 200, body: JSON.stringify({ ok: true }) });
       expect(mockProcessMessage).toHaveBeenCalledWith('');
+    });
+  });
+
+  describe('GitHub webhook events', () => {
+    it('routes requests with an x-github-event header to the GitHub handler with the raw bytes', async () => {
+      const response = { statusCode: 401, body: JSON.stringify({ error: 'Invalid signature' }) };
+      mockHandleGitHubWebhook.mockResolvedValue(response);
+      const body = '{"action":"opened"}';
+      const headers = { 'x-github-event': 'pull_request', 'x-hub-signature-256': 'sha256=abc' };
+
+      const result = await handler(functionUrlEvent(body, false, headers));
+
+      expect(result).toEqual(response);
+      expect(mockHandleGitHubWebhook).toHaveBeenCalledWith(headers, Buffer.from(body, 'utf-8'));
+      expect(mockProcessMessage).not.toHaveBeenCalled();
+    });
+
+    it('decodes a base64-encoded GitHub body to its original bytes', async () => {
+      mockHandleGitHubWebhook.mockResolvedValue({ statusCode: 200, body: '{}' });
+      const body = '{"zen":"hi"}';
+      const headers = { 'x-github-event': 'ping' };
+
+      await handler(functionUrlEvent(Buffer.from(body).toString('base64'), true, headers));
+
+      expect(mockHandleGitHubWebhook).toHaveBeenCalledWith(headers, Buffer.from(body, 'utf-8'));
+    });
+
+    it('keeps requests without the header on the Telegram path', async () => {
+      mockProcessMessage.mockResolvedValue();
+
+      await handler(functionUrlEvent('{"message":{"text":"hello"},"chat_id":"123"}'));
+
+      expect(mockHandleGitHubWebhook).not.toHaveBeenCalled();
+      expect(mockProcessMessage).toHaveBeenCalledTimes(1);
     });
   });
 

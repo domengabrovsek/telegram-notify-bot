@@ -34,6 +34,15 @@ curl -X POST "$WEBHOOK_URL" \
 
 Plain text only, 4096 characters max. The endpoint always answers `200` so Telegram does not queue retries, which means a rejected or failed send shows up in CloudWatch, not in the response. Telegram 429s and 5xx are retried twice with exponential backoff.
 
+## GitHub webhooks
+
+A request carrying an `X-GitHub-Event` header is a GitHub repository webhook. The handler checks `X-Hub-Signature-256` against the secret in SSM `/telegram-notify-bot/github-webhook-secret`, which OpenTofu generates. It then sends the admin chat the same PR message the github-actions notify workflow builds.
+
+- A bad or missing signature gets `401` and sends nothing. `ping` and unhandled events get `200` and send nothing.
+- It handles `pull_request` (opened, closed, review_requested) on the default branch, `issue_comment` (created, on a PR), `pull_request_review` (submitted) and `pull_request_review_comment` (created). Comments and reviews by bots are skipped.
+- A new PR shows its commit count, not the commit list, because the Lambda has no GitHub token.
+- A failed Telegram send returns `502`, so the delivery shows as failed in GitHub and can be redelivered.
+
 ## Deploying
 
 You need an AWS account, [OpenTofu](https://opentofu.org) 1.6+, Node 24, an S3 bucket for state, and a bot token from [@BotFather](https://t.me/botfather).
