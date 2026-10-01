@@ -13,6 +13,10 @@ terraform {
       source  = "hashicorp/null"
       version = "~> 3.2"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.7"
+    }
   }
 
   # Remote state backend for S3 (partial configuration)
@@ -114,7 +118,24 @@ resource "aws_ssm_parameter" "additional_chat_ids" {
   }
 }
 
-# IAM policy for SSM Parameter Store access
+/* Secret GitHub signs repository webhooks with (X-Hub-Signature-256).
+   Terraform owns the value; the webhook configuration reads it from SSM. */
+resource "random_password" "github_webhook_secret" {
+  length  = 40
+  special = false
+}
+
+# Stores the webhook secret the handler verifies GitHub deliveries against
+resource "aws_ssm_parameter" "github_webhook_secret" {
+  name        = "/telegram-notify-bot/github-webhook-secret"
+  description = "Secret GitHub repository webhooks are signed with"
+  type        = "SecureString"
+  value       = random_password.github_webhook_secret.result
+  tags        = var.tags
+}
+
+/* IAM policy for SSM Parameter Store access. The telegram-notify-bot/* wildcard
+   covers every parameter above, including github-webhook-secret. */
 resource "aws_iam_role_policy" "lambda_ssm_access" {
   name = "${var.project_name}-ssm-access"
   role = aws_iam_role.lambda_role.id
@@ -181,6 +202,7 @@ resource "aws_lambda_function" "telegram_bot" {
     aws_ssm_parameter.bot_token,
     aws_ssm_parameter.admin_chat_id,
     aws_ssm_parameter.additional_chat_ids,
+    aws_ssm_parameter.github_webhook_secret,
   ]
 }
 
