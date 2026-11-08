@@ -8,7 +8,7 @@ export default defineConfig({
     },
   },
   build: {
-    target: 'node24',
+    target: 'node26',
     outDir: 'dist',
     lib: {
       entry: resolve(import.meta.dirname, 'index.ts'),

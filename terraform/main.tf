@@ -178,7 +178,7 @@ resource "aws_lambda_function" "telegram_bot" {
   description      = "Handles webhook requests and sends Telegram notifications"
   role             = aws_iam_role.lambda_role.arn
   handler          = "index.handler"
-  runtime          = "nodejs24.x"
+  runtime          = "nodejs26.x"
   timeout          = var.lambda_timeout
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 

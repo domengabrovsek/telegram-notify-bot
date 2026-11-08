@@ -5,7 +5,7 @@
 - [Telegram Bot Token](https://t.me/botfather) (create with @BotFather)
 - AWS account with CLI configured
 - [OpenTofu](https://opentofu.org) v1.6+
-- Node.js 24+
+- Node.js 26+
 - S3 bucket for OpenTofu state
 
 ## 1. Create Telegram Bot
