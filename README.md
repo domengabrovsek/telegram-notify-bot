@@ -45,7 +45,7 @@ A request carrying an `X-GitHub-Event` header is a GitHub repository webhook. Th
 
 ## Deploying
 
-You need an AWS account, [OpenTofu](https://opentofu.org) 1.6+, Node 24, an S3 bucket for state, and a bot token from [@BotFather](https://t.me/botfather).
+You need an AWS account, [OpenTofu](https://opentofu.org) 1.6+, Node 26, an S3 bucket for state, and a bot token from [@BotFather](https://t.me/botfather).
 
 ```bash
 npm install
